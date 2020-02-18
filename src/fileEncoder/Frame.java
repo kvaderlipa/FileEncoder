@@ -33,7 +33,7 @@ import java.awt.event.ActionEvent;
 
 public class Frame extends JFrame {
 
-	private static final long serialVersionUID = 4442572861809787818L;
+	private static final long serialVersionUID = 4444444861809787818L;
 	private JPanel contentPane;
 	private JComboBox<String> comboBox;
 	private JTextArea txtConsole;
