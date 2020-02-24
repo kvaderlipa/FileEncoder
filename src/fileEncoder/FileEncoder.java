@@ -14,10 +14,15 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import javax.imageio.ImageIO;
+import javax.swing.JOptionPane;
+
+import com.sun.media.jfxmedia.events.NewFrameEvent;
 
 public class FileEncoder {
 	// variables for access to see actual progress and for earlier terminating
@@ -160,6 +165,81 @@ public class FileEncoder {
 		//		
 		inProgress = false;
 		//
+	}
+	
+	private static long totalSize;
+	/**
+	 * private recursive method, get all files/folders in path, rename to random and calculate total size
+	 */
+	private static void getDirFiles(File file, List<File> list, Random r)throws IOException{		
+		String name;
+		File[] files;
+		File file2;
+		if(file.isDirectory()){
+			name = "";
+			for (int i = 0; i < 16; i++)
+				name += r.nextInt(10);
+			file2 = new File(file.getParent()+"/"+name);
+			if(!file.renameTo(file2))
+				throw new IOException("File/Folder name already exists, safe delete not successful");
+			file = file2;
+		    // get file and DIR list
+			files = file.listFiles();
+			if(files!=null)
+				for (File f : files) {
+					getDirFiles(f, list, r);						
+				}
+		}else{
+			totalSize += file.length();
+			//rename file name
+			name = "";
+			for (int i = 0; i < 16; i++)
+				if(i!=12)
+					name += r.nextInt(10);
+				else
+					name += ".";
+			file2 = new File(file.getParent()+"/"+name);
+			if(!file.renameTo(file2))
+				throw new IOException("File/Folder name already exists, safe delete not successful");
+			list.add(file2);
+		}
+	} 
+
+	public static void SAFE_DELETE(String input, long seed) throws IOException {
+		//
+		inProgress = true;
+		cancel = false;
+		progress = 0;
+		//
+		Random r = new Random(seed);
+		byte[] buffer = new byte[65536];
+		List<File> list = new LinkedList<File>();
+		totalSize = 0;//will be filled by total size after getDirFiles is called
+		File file = new File(input);
+		file = new File(file.getCanonicalPath());
+		getDirFiles(file, list, r);
+
+		long actualSize = 0;
+		int i;
+				
+		for (File f : list) {						
+	        RandomAccessFile racr = new RandomAccessFile(f, "r");
+	        RandomAccessFile racw = new RandomAccessFile(f, "rw");
+	                
+			while((i=racr.read(buffer))!=-1 && !cancel) {				
+				r.nextBytes(buffer);				
+				racw.write(buffer, 0, i);
+				actualSize +=i;
+				progress = (int)((double)actualSize/totalSize*100);
+			}
+			racr.close();
+			racw.close();
+			if(cancel)
+				break;
+		}
+		//		
+		inProgress = false;
+		//		
 	}
 	
 	public static void ONE_TIME_PAD(String input, String output, long seed) throws IOException {
@@ -850,7 +930,26 @@ public class FileEncoder {
 					System.out.println("-gen output.bin 1024 		- generate file output.bin of size 1024 with default seed 4963");
 					System.out.println("-gen output.bin 1024 13245	- generate file output.bin of size 1024 with seed 12345 (same seed generate same data)");
 				}
-			}			
+			}		
+			//file generation
+			if(args[0].toLowerCase().equals("-del")) {
+				if(args.length>=2) {
+					if(args.length>=3)
+						seed = Long.parseLong(args[2]);
+					SAFE_DELETE(args[1], seed);
+				}else {					
+					System.out.println("Program Arguments");
+					System.out.println("1 - input file/folder - mandatory");					
+					System.out.println("2 - random seed(long), default 4963");
+					System.out.println("");
+					System.out.println("secure delete mean rewriting the data instead of common delete in system, when only file is marked as delete and the data stay unchanged");
+					System.out.println("function rewrites content and name for file or folder (recursively to all subfolders and files) to random data");
+					System.out.println("used Java random, for more secure it is recommended to run function more times with different seed");
+					System.out.println("examples");
+					System.out.println("-del fileTo.del		- delete file fileTo.del with default seed 4963");
+					System.out.println("-del fileTo.del	12345 	- delete file fileTo.del using seed 12345");
+				}
+			}
 		}else {
 			//no arguments or -h
 			System.out.println("*********************************************************************************************************************");			
@@ -863,6 +962,7 @@ public class FileEncoder {
 			System.out.println("-gen 	- Random data generating");
 			System.out.println("-sgen 	- Secure random data generating");
 			System.out.println("-freq 	- Frequency analysis of binary file");
+			System.out.println("-del 	- Secure delete for files and folders (rewrite data inside files and names to random data)");
 			System.out.println("\nrun with argument to see further details");
 			System.out.println("");
 			System.out.println("-gui 	- run Graphical User Interface program with all mentioned function");

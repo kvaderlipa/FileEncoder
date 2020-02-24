@@ -286,8 +286,19 @@ public class Frame extends JFrame {
 											addConsole("ONE TIME PAD ecryption finished with ERROR");
 											JOptionPane.showMessageDialog(frame, "ONE TIME PAD ecryption CANCELLED by user", "ERROR", JOptionPane.ERROR_MESSAGE);
 										}
-										break;	
-									case 12://"STEG - ENCODE INTO IMAGE
+										break;
+									case 12://"SAFE DELETE
+										addConsole("SAFE DELETE - REWRITE FILE/FOLDER CONTENT WITH RANDOM DATA (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText());
+										FileEncoder.SAFE_DELETE(txtInputFile.getText(), Long.parseLong(txtRNDSeed.getText()));										
+										if(!FileEncoder.cancel) {
+											addConsole("SAFE DELETE - SAFE DELETE successfully finished");
+											JOptionPane.showMessageDialog(frame, "SAFE DELETE - SAFE DELETE successfully finished", "OK - success", JOptionPane.INFORMATION_MESSAGE);
+										}else {
+											addConsole("SAFE DELETE - SAFE DELETE finished with ERROR");
+											JOptionPane.showMessageDialog(frame, "SAFE DELETE - SAFE DELETE finished with ERROR", "ERROR", JOptionPane.ERROR_MESSAGE);
+										}
+										break;
+									case 13://"STEG - ENCODE INTO IMAGE
 										addConsole("STEG - ENCODE INTO IMAGE (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText()+" + "+txtKeyFile.getText()+" - >"+txtOutputFile.getText());
 										int bitCount = FileEncoder.ENCODE_FILE_TO_IMAGE(txtKeyFile.getText(), txtInputFile.getText(), txtOutputFile.getText(), Long.parseLong(txtRNDSeed.getText()));										
 										if(!FileEncoder.cancel) {
@@ -298,7 +309,7 @@ public class Frame extends JFrame {
 											JOptionPane.showMessageDialog(frame, "STEG - ENCODE INTO IMAGE CANCELLED by user", "ERROR", JOptionPane.ERROR_MESSAGE);
 										}
 										break;
-									case 13://"STEG - DECODE FROM IMAGE
+									case 14://"STEG - DECODE FROM IMAGE
 										addConsole("STEG - DECODE FROM IMAGE (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText()+" - >"+txtOutputFile.getText());
 										FileEncoder.DECODE_FILE_FROM_IMAGE(txtInputFile.getText(), txtOutputFile.getText(), Long.parseLong(txtRNDSeed.getText()));										
 										if(!FileEncoder.cancel) {
@@ -422,9 +433,7 @@ public class Frame extends JFrame {
 				enableSelected(comboBox.getSelectedIndex());				
 			}
 		});
-		comboBox.setModel(new DefaultComboBoxModel<String>(new String[] {"--- CHOOSE ACTION ---", "BASE2 ENCODE", "BASE2 DECODE", "BASE16 ENCODE", "BASE16 DECODE", "BASE64 ENCODE", "BASE64 DECODE", "FILE ANALYSIS", 
-																		 "GENERATE RANDOM DATA", "GENERATE SECURE RANDOM DATA", "ONE TIME PAD - FILE KEY", "ONE TIME PAD - RND STREAM KEY",
-																		 "STEG - ENCODE INTO IMAGE", "STEG - DECODE FROM IMAGE"}));
+		comboBox.setModel(new DefaultComboBoxModel(new String[] {"--- CHOOSE ACTION ---", "BASE2 ENCODE", "BASE2 DECODE", "BASE16 ENCODE", "BASE16 DECODE", "BASE64 ENCODE", "BASE64 DECODE", "FILE ANALYSIS", "GENERATE RANDOM DATA", "GENERATE SECURE RANDOM DATA", "ONE TIME PAD - FILE KEY", "ONE TIME PAD - RND STREAM KEY", "SAFE DELETE", "STEG - ENCODE INTO IMAGE", "STEG - DECODE FROM IMAGE"}));
 		
 		txtFileSize = new JTextField();
 		txtFileSize.setEnabled(false);
@@ -671,7 +680,23 @@ public class Frame extends JFrame {
 				lblOutputFile.setEnabled(true);
 				btnRun.setEnabled(true);
 				break;		
-			case 12://"STEG ENCODE
+			case 12://"SAFE DELETE
+				txtInputFile.setEnabled(true);				
+				txtOutputFile.setEnabled(false);
+				txtKeyFile.setEnabled(false);				
+				btnKeyFile.setEnabled(false);
+				btnInputFile.setEnabled(true);
+				btnOutputFile.setEnabled(false);
+				txtFileSize.setEnabled(false);
+				txtRNDSeed.setEnabled(true);				
+				txtThreads.setEnabled(false);
+				lblRndSeed.setEnabled(true);
+				lblKeyFile.setEnabled(false);
+				lblInputFile.setEnabled(true);
+				lblOutputFile.setEnabled(false);
+				btnRun.setEnabled(true);
+				break;	
+			case 13://"STEG ENCODE
 				txtInputFile.setEnabled(true);				
 				txtOutputFile.setEnabled(true);
 				txtKeyFile.setEnabled(true);				
@@ -687,7 +712,7 @@ public class Frame extends JFrame {
 				lblOutputFile.setEnabled(true);
 				btnRun.setEnabled(true);
 				break;	
-			case 13://"STEG DECODE
+			case 14://"STEG DECODE
 				txtInputFile.setEnabled(true);
 				txtOutputFile.setEnabled(true);
 				txtKeyFile.setEnabled(false);

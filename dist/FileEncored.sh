@@ -1,0 +1,1 @@
+java -cp FileEncoder.jar fileEncoder.FileEncoder $1 $2 $3 $4 $5

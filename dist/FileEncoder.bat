@@ -1,0 +1,1 @@
+java -cp c:\Users\4900063\WORK\Crypto\FileEncoder\FileEncoder.jar fileEncoder.FileEncoder %1 %2 %3 %4 %5
