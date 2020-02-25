@@ -179,7 +179,7 @@ public class FileEncoder {
 			name = "";
 			for (int i = 0; i < 16; i++)
 				name += r.nextInt(10);
-			file2 = new File(file.getParent()+"/"+name);
+			file2 = new File(file.getParent()+File.separatorChar+name);
 			if(!file.renameTo(file2))
 				throw new IOException("File/Folder name already exists, safe delete not successful");
 			file = file2;
@@ -198,7 +198,7 @@ public class FileEncoder {
 					name += r.nextInt(10);
 				else
 					name += ".";
-			file2 = new File(file.getParent()+"/"+name);
+			file2 = new File(file.getParent()+File.separatorChar+name);
 			if(!file.renameTo(file2))
 				throw new IOException("File/Folder name already exists, safe delete not successful");
 			list.add(file2);
