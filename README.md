@@ -1,2 +1,2 @@
 # FileEncoder
-Program for encoding/decoding/encrypting/decrypting data, enc/dec to image, generating random data, etc. with GUI
+Program for encoding/decoding/encrypting/decrypting data, enc/dec to image (steganography), generating random data, secure delete etc. with GUI
