@@ -181,7 +181,7 @@ public class FileEncoder {
 				name += r.nextInt(10);
 			file2 = new File(file.getParent()+File.separatorChar+name);
 			if(!file.renameTo(file2))
-				throw new IOException("File/Folder name already exists, safe delete not successful");
+				throw new IOException("File/Folder name already exists, secure delete not successful");
 			file = file2;
 		    // get file and DIR list
 			files = file.listFiles();
@@ -200,12 +200,12 @@ public class FileEncoder {
 					name += ".";
 			file2 = new File(file.getParent()+File.separatorChar+name);
 			if(!file.renameTo(file2))
-				throw new IOException("File/Folder name already exists, safe delete not successful");
+				throw new IOException("File/Folder name already exists, secure delete not successful");
 			list.add(file2);
 		}
 	} 
 
-	public static void SAFE_DELETE(String input, long seed) throws IOException {
+	public static void SECURE_DELETE(String input, long seed) throws IOException {
 		//
 		inProgress = true;
 		cancel = false;
@@ -936,7 +936,7 @@ public class FileEncoder {
 				if(args.length>=2) {
 					if(args.length>=3)
 						seed = Long.parseLong(args[2]);
-					SAFE_DELETE(args[1], seed);
+					SECURE_DELETE(args[1], seed);
 				}else {					
 					System.out.println("Program Arguments");
 					System.out.println("1 - input file/folder - mandatory");					
@@ -955,7 +955,7 @@ public class FileEncoder {
 			System.out.println("*********************************************************************************************************************");			
 			System.out.println("Program offer next functions:");
 			System.out.println("-enc 	- Encryption (One Time Pad)");
-			System.out.println("-steg 	- Encoding data into image (Steganogtaphy)");
+			System.out.println("-steg 	- Encoding data into image (Steganography)");
 			System.out.println("-base2  - base2 encoding");			
 			System.out.println("-base16 - base16 encoding");			
 			System.out.println("-base64 - base64 encoding");

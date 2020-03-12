@@ -287,15 +287,15 @@ public class Frame extends JFrame {
 											JOptionPane.showMessageDialog(frame, "ONE TIME PAD ecryption CANCELLED by user", "ERROR", JOptionPane.ERROR_MESSAGE);
 										}
 										break;
-									case 12://"SAFE DELETE
-										addConsole("SAFE DELETE - REWRITE FILE/FOLDER CONTENT WITH RANDOM DATA (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText());
-										FileEncoder.SAFE_DELETE(txtInputFile.getText(), Long.parseLong(txtRNDSeed.getText()));										
+									case 12://"SECURE DELETE
+										addConsole("SECURE DELETE - REWRITE FILE/FOLDER CONTENT WITH RANDOM DATA (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText());
+										FileEncoder.SECURE_DELETE(txtInputFile.getText(), Long.parseLong(txtRNDSeed.getText()));										
 										if(!FileEncoder.cancel) {
-											addConsole("SAFE DELETE - SAFE DELETE successfully finished");
-											JOptionPane.showMessageDialog(frame, "SAFE DELETE - SAFE DELETE successfully finished", "OK - success", JOptionPane.INFORMATION_MESSAGE);
+											addConsole("SECURE DELETE - SECURE DELETE successfully finished");
+											JOptionPane.showMessageDialog(frame, "SECURE DELETE - SECURE DELETE successfully finished", "OK - success", JOptionPane.INFORMATION_MESSAGE);
 										}else {
-											addConsole("SAFE DELETE - SAFE DELETE finished with ERROR");
-											JOptionPane.showMessageDialog(frame, "SAFE DELETE - SAFE DELETE finished with ERROR", "ERROR", JOptionPane.ERROR_MESSAGE);
+											addConsole("SECURE DELETE - SECURE DELETE finished with ERROR");
+											JOptionPane.showMessageDialog(frame, "SECURE DELETE - SECURE DELETE finished with ERROR", "ERROR", JOptionPane.ERROR_MESSAGE);
 										}
 										break;
 									case 13://"STEG - ENCODE INTO IMAGE
@@ -433,7 +433,7 @@ public class Frame extends JFrame {
 				enableSelected(comboBox.getSelectedIndex());				
 			}
 		});
-		comboBox.setModel(new DefaultComboBoxModel(new String[] {"--- CHOOSE ACTION ---", "BASE2 ENCODE", "BASE2 DECODE", "BASE16 ENCODE", "BASE16 DECODE", "BASE64 ENCODE", "BASE64 DECODE", "FILE ANALYSIS", "GENERATE RANDOM DATA", "GENERATE SECURE RANDOM DATA", "ONE TIME PAD - FILE KEY", "ONE TIME PAD - RND STREAM KEY", "SAFE DELETE", "STEG - ENCODE INTO IMAGE", "STEG - DECODE FROM IMAGE"}));
+		comboBox.setModel(new DefaultComboBoxModel(new String[] {"--- CHOOSE ACTION ---", "BASE2 ENCODE", "BASE2 DECODE", "BASE16 ENCODE", "BASE16 DECODE", "BASE64 ENCODE", "BASE64 DECODE", "FILE ANALYSIS", "GENERATE RANDOM DATA", "GENERATE SECURE RANDOM DATA", "ONE TIME PAD - FILE KEY", "ONE TIME PAD - RND STREAM KEY", "SECURE DELETE", "STEG - ENCODE INTO IMAGE", "STEG - DECODE FROM IMAGE"}));
 		
 		txtFileSize = new JTextField();
 		txtFileSize.setEnabled(false);
@@ -680,7 +680,7 @@ public class Frame extends JFrame {
 				lblOutputFile.setEnabled(true);
 				btnRun.setEnabled(true);
 				break;		
-			case 12://"SAFE DELETE
+			case 12://"SECURE DELETE
 				txtInputFile.setEnabled(true);				
 				txtOutputFile.setEnabled(false);
 				txtKeyFile.setEnabled(false);				
