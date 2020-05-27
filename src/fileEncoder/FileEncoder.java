@@ -20,9 +20,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import javax.imageio.ImageIO;
-import javax.swing.JOptionPane;
-
-import com.sun.media.jfxmedia.events.NewFrameEvent;
 
 public class FileEncoder {
 	// variables for access to see actual progress and for earlier terminating
