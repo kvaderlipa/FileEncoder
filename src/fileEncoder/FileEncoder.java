@@ -214,26 +214,29 @@ public class FileEncoder {
 		totalSize = 0;//will be filled by total size after getDirFiles is called
 		File file = new File(input);
 		file = new File(file.getCanonicalPath());
-		getDirFiles(file, list, r);
-
-		long actualSize = 0;
-		int i;
-				
-		for (File f : list) {						
-	        RandomAccessFile racr = new RandomAccessFile(f, "r");
-	        RandomAccessFile racw = new RandomAccessFile(f, "rw");
-	                
-			while((i=racr.read(buffer))!=-1 && !cancel) {				
-				r.nextBytes(buffer);				
-				racw.write(buffer, 0, i);
-				actualSize +=i;
-				progress = (int)((double)actualSize/totalSize*100);
+		if(file.exists()){
+			getDirFiles(file, list, r);
+	
+			long actualSize = 0;
+			int i;
+					
+			for (File f : list) {						
+		        RandomAccessFile racr = new RandomAccessFile(f, "r");
+		        RandomAccessFile racw = new RandomAccessFile(f, "rw");
+		                
+				while((i=racr.read(buffer))!=-1 && !cancel) {				
+					r.nextBytes(buffer);				
+					racw.write(buffer, 0, i);
+					actualSize +=i;
+					progress = (int)((double)actualSize/totalSize*100);
+				}
+				racr.close();
+				racw.close();
+				if(cancel)
+					break;
 			}
-			racr.close();
-			racw.close();
-			if(cancel)
-				break;
-		}
+		}else 
+			throw new IOException("File/Folder ("+input+") does not exists, secure delete not successful");
 		//		
 		inProgress = false;
 		//		
@@ -713,6 +716,8 @@ public class FileEncoder {
 	public static void main(String[] args) throws Exception {	
 		int bitCount;
 		long seed = 4963;
+		
+		//System.out.println("P001,P002,P003,P004,P005,".substring(0,-1));
                 /*
                 bitCount = ENCODE_FILE_TO_IMAGE("c:/Users/4900063/WORK/Crypto/FileEncoder/data.dat", 
                 									"c:/Users/4900063/WORK/Crypto/FileEncoder/5000x5000.jpg", 
