@@ -21,13 +21,36 @@ import java.util.Random;
 import java.util.TreeMap;
 import javax.imageio.ImageIO;
 
+/**
+ * 
+ * @author 4900063
+ *
+ * TODO
+ *DONE 		steg zrychlenie, urobit cez maticu intov, je to rychlejsie
+ * 		 
+ *  	IN PROGRESS potom pri stegano, mozno dat moznost, ze prekonvertuje subor na obrazok, urobi taky velky ako treba, dalo by sa potom rychlo takto do obrazka konvertovat ay sa to dalo cez web bez problemov posielat
+ *  		- dorobit na adresare, ze ak adresar, tak vytvori adresar lakes, kde rekurzivne ako v delete vsetko zakoduje do obrazkov jazier, vyzera ale, ze pouzije na kazdy obrazok rovnaky seed, lebo neviem zabezpecit poradie kedze nazvy budu pomenene
+ *  		- opacne tiez pre dekompresiu
+ *  		- ak je velkost prilis velka, rozdelit, dat parameter, vymysliet ako by sa zabezpecilo, ze bude vediet kde pokracovat
+ *DONE		- asi koli jednoduchosti, ak je -steg a za nim len jeden parameter, beriez, ze automaticky generovat, ak chcem specificky seed, tak dam dve pomlcky a seed - - 455
+ *DOME		ak dame -steg -d .png tak dekoduje vstky subory konciace .png			
+ *  
+ * 		porozmyslat nad one time pad s moznostou prepis, kde by priamo prepisovlo data, aby sa nedali spatne dostat spat, tu ma zmysel aj adresar, mozno tabulka s nazvami random
+ * 		porozmyslat AES a prepis, co by bol unosware, ;-)) a tiez rekurzivne na adresare, nahodne heslo a cez public key zasifrovat a vytvorit subor so zasifrovanym heslom
+ * 		
+ */
+
 public class FileEncoder {
+	
+	private static boolean PRODUCTION = true;
+	
 	// variables for access to see actual progress and for earlier terminating
 	static boolean inProgress = false;	//status if working or not
 	static boolean cancel = false;		//signal for canceling process
 	static int progress = 0; 			// 0 to 100%	
 	//
-	
+	static final long DEFAULT_SEED = 4963;
+	static final long INIT_CYCLES = 4963;
 	
 	static long cnt = 0;
 	public static void GEN_SECURE_RANDOM_DATA_FILE(String output, final long size, int threadCount) throws Exception {
@@ -131,18 +154,17 @@ public class FileEncoder {
 		//
 	}
 	
-	public static void GEN_RANDOM_DATA_FILE(String output, long size, long seed) throws IOException {
+	public static void GEN_RANDOM_DATA_FILE(String output, long size, Random r) throws IOException {
 		//
 		inProgress = true;
 		cancel = false;
 		progress = 0;
-		//
-		Random r = new Random(seed);
+		//		
 		
 		byte[] buffer = new byte[65536];
 		
 		// initialize
-		for (int i = 0; i < 4963; i++)
+		for (int i = 0; i < INIT_CYCLES; i++)
 			r.nextBytes(buffer);
 		
 		long i = 0;
@@ -202,13 +224,12 @@ public class FileEncoder {
 		}
 	} 
 
-	public static void SECURE_DELETE(String input, long seed) throws IOException {
+	public static void SECURE_DELETE(String input, Random r) throws IOException {
 		//
 		inProgress = true;
 		cancel = false;
 		progress = 0;
-		//
-		Random r = new Random(seed);
+		//		
 		byte[] buffer = new byte[65536];
 		List<File> list = new LinkedList<File>();
 		totalSize = 0;//will be filled by total size after getDirFiles is called
@@ -242,19 +263,17 @@ public class FileEncoder {
 		//		
 	}
 	
-	public static void ONE_TIME_PAD(String input, String output, long seed) throws IOException {
+	public static void ONE_TIME_PAD(String input, String output, Random r) throws IOException {
 		//
 		inProgress = true;
 		cancel = false;
 		progress = 0;
-		//
-		Random r = new Random(seed);
-		
+				
 		byte[] buffer = new byte[65536];
 		byte[] xor = new byte[65536];
 		
 		// initialize
-		for (int i = 0; i < 4963; i++)
+		for (int i = 0; i < INIT_CYCLES; i++)
 			r.nextBytes(xor);
 		
 		int i;
@@ -275,56 +294,158 @@ public class FileEncoder {
 		//
 	}
 	
-        public static int ENCODE_FILE_TO_IMAGE(String input, String imageFile, String output, long seed) throws Exception{            
-    		//
+		public static BufferedImage CREATE_IMAGE(int width, int height, int red, int green, int blue, Random r){
+			BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			int bgr = (red<<16)+(green<<8)+blue;
+			
+			for(int x=0;x<width;x++)
+				for(int y=0;y<height;y++)
+					bi.setRGB(x, y, r!=null?r.nextInt():bgr);			
+			return bi;
+		}
+				 
+        public static int ENCODE_FILE_TO_IMAGE(String input, String imageFile, String output, long seed) throws Exception{
+        	//
     		inProgress = true;
     		cancel = false;
     		progress = 0;
     		cnt = 0;
     		//
         	BufferedImage img = null;
-            try {
-                img = ImageIO.read(new File(imageFile));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            RandomAccessFile raf = new RandomAccessFile(input, "r");
-            ImageByteStreamWriter ibsw = new ImageByteStreamWriter(img, seed);
-            int b;
-            int size = (int)raf.length();
-            //write file length
-            ibsw.write(size&255);
-            ibsw.write(size>>8&255);
-            ibsw.write(size>>16&255);
-            ibsw.write(size>>24&255);
-            input = new File(input).getName();
-            //write name length
-            size = input.length();
-            ibsw.write(size&255);
-            //write name of file
-            for (int i = 0; i < input.length(); i++)
-                ibsw.write((int)input.charAt(i));
-            //write file data
-            while((b=raf.read())!=-1 && !cancel){
-                ibsw.write(b);
-                progress = (int)((double)raf.getFilePointer()/raf.length()*100);
-            }
-            raf.close();
-            //bit align, not needed if pixel mixing is used
-            //ibsw.bitAlign();
-            
-            try {
-                ImageIO.write(img, output.substring(output.lastIndexOf(".")+1), new File(output));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        	if(!imageFile.equals("-"))
+	            try {
+	                img = ImageIO.read(new File(imageFile));
+	            } catch (IOException e) {
+	                e.printStackTrace();
+	            }
+        	        	        	
+        	ImageByteStreamWriter ibsw = null;
+        	String origOutput = output;
+        	String origInput = input;
+        	RandomAccessFile raf = new RandomAccessFile(input, "r");
+        	RAFBuffer rafB = new RAFBuffer(raf);
+        	        	
+        	//if needed to split determine parts count, if defined by user output image, must be managed by user
+        	int parts = 0;
+        	if(img!=null){
+        		//parts = (int)Math.ceil((double)raf.length()/(img.getWidth()*img.getHeight()*3+260));
+        	}else{
+        		parts = (int)Math.ceil((double)raf.length()/MAX_FILE_SIZE);
+        	} 
+        	
+        	long time = System.currentTimeMillis();
+        	for(int i=0;i<parts;i++){
+	        	//if not defined, random lake name
+	        	if(origOutput.equals("-")){
+	        		int counter = 0;
+	        		String lake = LAKES[RANDOM.nextInt(LAKES.length)];
+	        		do{
+	        			output = lake+(counter>0?("_"+counter):"")+".png";	        			
+	        			counter++;
+	        		}while(new File(output).exists());	        		
+	        	}
+	        	        	
+	            //if not defined created as lake
+	            if(img==null){
+	            	long  size = raf.length()/3;
+	            	if(size<MIN_FILE_SIZE)
+	            		size = MIN_FILE_SIZE;
+	            	if(parts>1)
+	            		size = MAX_FILE_SIZE/3;
+	        		size *= 1/((MAX_DATA_IN_IMAGE_RATIO-MIN_DATA_IN_IMAGE_RATIO)*RANDOM.nextDouble()+MIN_DATA_IN_IMAGE_RATIO );
+	        		
+	        		int height = (int)Math.ceil(Math.sqrt(size/WIDTH_HEIGHT_RATIO));  
+	        		int width = (int)Math.ceil(height*WIDTH_HEIGHT_RATIO);
+	        		
+	        		int shade = -MAX_SHADE+RANDOM.nextInt(MAX_SHADE*2);
+	        		
+		            time = System.currentTimeMillis();
+	        		img = CREATE_IMAGE(width, height, LAKE_WATER_RGB[0]+shade, LAKE_WATER_RGB[1]+shade, LAKE_WATER_RGB[2]+shade, null);
+	        		/*
+	        		System.out.println(System.currentTimeMillis()-time+" milis took create empty image");
+		            time = System.currentTimeMillis();
+		            */
+	            }
+	            
+	            ibsw = new ImageByteStreamWriter(img, new Random(seed));
+	            int b;
+	            int size = (int)raf.length();
+	            if(parts>1){
+	            	if(i<parts-1)
+	            		size = (int)MAX_FILE_SIZE;
+	            	else
+	            		size = (int)(raf.length()%MAX_FILE_SIZE);
+	            	
+	            }
+	            //write file length
+	            ibsw.write(size&255);
+	            ibsw.write(size>>8&255);
+	            ibsw.write(size>>16&255);
+	            ibsw.write(size>>24&255);
+	            input = new File(origInput).getName();
+	            if(parts>1){
+	            	input+="."+String.format("%0"+(parts+"").length()+"d", i+1);
+	            }
+	            //write name length
+	            size = input.length();
+	            ibsw.write(size&255);
+	            //write name of file
+	            for (int j = 0; j < input.length(); j++)
+	                ibsw.write((int)input.charAt(j));
+	            //write file data
+	            long filePointer = 0;
+	            time = System.currentTimeMillis();
+	            while((b=rafB.read())!=-1 && !cancel){	            	
+	                ibsw.write(b);
+	                //progress = (int)((double)raf.getFilePointer()/raf.length()*100);
+	                if(++filePointer==MAX_FILE_SIZE)
+	                	break;
+	            }
+	            /*
+	            System.out.println(System.currentTimeMillis()-time+" milis took trans matrix to image image");
+	            time = System.currentTimeMillis();
+	            */
+	            ibsw.trans2img();
+	            /*
+	            System.out.println(System.currentTimeMillis()-time+" milis took write to image");
+	            time = System.currentTimeMillis();
+	            */            
+	            try {
+	                ImageIO.write(img, output.substring(output.lastIndexOf(".")+1), new File(output));
+	                /*
+	                System.out.println(System.currentTimeMillis()-time+" milis took write image to file");
+		            time = System.currentTimeMillis();
+		            */
+	                System.out.println("file "+output+" created ("+(ibsw.getBitSize()+1)+" bits used)");
+	                
+	                /*
+	                int[] matrix = new int[img.getWidth()*img.getHeight()];
+	                
+	            	img.getRGB(0, 0, img.getWidth(), img.getHeight(), matrix, 0, img.getWidth());	            	
+	            	System.out.println(System.currentTimeMillis()-time+" milis took read whole matrix RGB");
+		            time = System.currentTimeMillis();
+		            
+	            	img.setRGB(0, 0, img.getWidth(), img.getHeight(), matrix, 0, img.getWidth());
+	            	System.out.println(System.currentTimeMillis()-time+" milis took write whole matrix RGB");
+		            time = System.currentTimeMillis();
+		            
+		            ImageIO.write(img, output.substring(output.lastIndexOf(".")+1), new File("X_"+output));
+		            System.out.println(System.currentTimeMillis()-time+" milis took write image to file");
+		            time = System.currentTimeMillis();
+	                */
+	                img = null;
+	            } catch (IOException e) {
+	                e.printStackTrace();
+	            }
+        	}        	
+            raf.close();            
             //    		
     		inProgress = false;
     		//
             return ibsw.getBitSize()+1;
         }
         
-        public static void DECODE_FILE_FROM_IMAGE(String imageFile, String outputPath, long seed) throws Exception{
+        public static void DECODE_FILE_FROM_IMAGE(String imageFile, String outputPath, Random r) throws Exception{
     		//
     		inProgress = true;
     		cancel = false;
@@ -339,7 +460,7 @@ public class FileEncoder {
                 e.printStackTrace();
             }
            
-            ImageByteStreamReader ibsr = new ImageByteStreamReader(img, seed);            
+            ImageByteStreamReader ibsr = new ImageByteStreamReader(img, r);
             int size = 0;                        
             String name="";
             size = ibsr.read()|ibsr.read()<<8|ibsr.read()<<16|ibsr.read()<<24;
@@ -355,10 +476,12 @@ public class FileEncoder {
 					outputPath += "/";
             } 
             raf = new RandomAccessFile(outputPath+name, "rw");
+            RAFBuffer rafb = new RAFBuffer(raf);
             for (int i = 0; i < size && !cancel; i++){
-            	raf.write(ibsr.read());   
-            	progress = (int)((double)i/size*100);
+            	rafb.write(ibsr.read());   
+            	//progress = (int)((double)i/size*100);
             }
+            rafb.flush();
             raf.close();
             //    		
     		inProgress = false;
@@ -714,8 +837,40 @@ public class FileEncoder {
 	}
 	
 	public static void main(String[] args) throws Exception {	
+	
+		/*
+		long  size = 35000;
+		size *= 1/(MAX_DATA_IN_IMAGE_RATIO-RANDOM.nextDouble()*MIN_DATA_IN_IMAGE_RATIO);
+		
+		int height = (int)Math.ceil(Math.sqrt(size/WIDTH_HEIGHT_RATIO));  
+		int width = (int)Math.ceil(height*WIDTH_HEIGHT_RATIO);
+		
+		System.out.println(size+"="+width+"*"+height);
+		
+		int shade = -MAX_SHADE+RANDOM.nextInt(MAX_SHADE*2);
+		
+		BufferedImage bi = CREATE_IMAGE(width, height, LAKE_WATER_RGB[0]+shade, LAKE_WATER_RGB[1]+shade, LAKE_WATER_RGB[2]+shade, null);
+		try {
+            ImageIO.write(bi,  "png", new File(LAKES[RANDOM.nextInt(LAKES.length)]+".png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+		System.out.println(String.format("%07d", 55));
+
+		System.out.print(new Date(System.currentTimeMillis()));
+		FileInputStream fis = new FileInputStream(new File("data"));
+		BufferedInputStream bis = new BufferedInputStream(fis);
+		bis.re
+		while(raf.read()!=-1);
+		raf.close();
+		System.out.print(new Date(System.currentTimeMillis()));
+		
+		if(1==1)
+			return;
+*/		
 		int bitCount;
-		long seed = 4963;
+		long seed = DEFAULT_SEED;
 		
 		//System.out.println("P001,P002,P003,P004,P005,".substring(0,-1));
                 /*
@@ -745,7 +900,11 @@ public class FileEncoder {
 			}
 			//steganography, encode data into image
 			if(args[0].toLowerCase().equals("-steg")) {
-				if((args.length>=4)||(args.length>=3 && args[1].toLowerCase().equals("-d")) ) {					
+				if((args.length>=4) 											//basic 4,5
+				   ||(args.length>=3 && args[1].toLowerCase().equals("-d")) 	//decoding 
+				   ||(args.length==2)										 	//generating random images with default seed
+				   ||(args.length==3 && !args[1].toLowerCase().equals("-d")) 	//generating random images with some seed
+						){					
 					if(args[1].toLowerCase().equals("-d")) {
 						String path = "";						
 						if(args.length>=4){
@@ -759,19 +918,37 @@ public class FileEncoder {
 							seed = Long.parseLong(args[4]);
 							path = args[3];
 						}
-						DECODE_FILE_FROM_IMAGE(args[2], path, seed);						
+						if(args[2].startsWith(".")){							
+							File dir = new File("*"+args[2]);
+							dir = new File(dir.getAbsolutePath()).getParentFile();
+							File[] files = dir.listFiles();							
+							for (int i = 0; files!=null && i < files.length; i++) 
+								if(files[i].getName().endsWith(args[2])){
+									System.out.println("Decoding File: "+files[i].getName());
+									DECODE_FILE_FROM_IMAGE(files[i].getName(), path, new Random(seed));
+								}
+						}else
+							DECODE_FILE_FROM_IMAGE(args[2], path, new Random(seed));						
 					}else{
-						if(args.length>=5)
-							seed = Long.parseLong(args[4]);
-						bitCount = ENCODE_FILE_TO_IMAGE(args[1], args[2], args[3], seed);
-						System.out.print("Used bits: "+bitCount);
+						if(args.length==2){							
+							bitCount = ENCODE_FILE_TO_IMAGE(args[1], "-", "-", seed);
+						}else{
+							if(args.length==3){
+								seed = Long.parseLong(args[2]);
+								bitCount = ENCODE_FILE_TO_IMAGE(args[1], "-", "-", seed);
+							}else{
+								if(args.length>=5)
+									seed = Long.parseLong(args[4]);
+								bitCount = ENCODE_FILE_TO_IMAGE(args[1], args[2], args[3], seed);
+							}
+						}						
 					}															
 				}else {					
 					System.out.println("Program Arguments");
 					System.out.println("1 - input data file - mandatory (file to be encoded)");
-					System.out.println("2 - input image file - mandatory (medium use for encoding)");
-					System.out.println("3 - output image file - mandatory (output image with encoded data, use loseless img format for output bmp/png, etc...)");
-					System.out.println("4 - random seed(long), something like key, default 4963");					
+					System.out.println("2 - input image file - mandatory (medium use for encoding, type character '-' for random generated)");
+					System.out.println("3 - output image file - mandatory (output image with encoded data, use loseless img format for output bmp/png, etc..., type '-' for random generated)");
+					System.out.println("4 - random seed(long), something like key, default "+DEFAULT_SEED);					
 					System.out.println("");
 					System.out.println("it encodes into image also name of data file");
 					System.out.println("encode optional datafile into image using simple encryption(One Time Pad using seed) and no compression starting with less significant RGB bits up to all RGB bits according file size");
@@ -784,10 +961,11 @@ public class FileEncoder {
 					System.out.println("use -d for decode data from image");
 					System.out.println("1 - input image file - mandatory (file where data are encoded)");
 					System.out.println("2 - output directory path (where to copy data file, default actual directory)");
-					System.out.println("3 - random seed(long), something like key, default 4963");					
+					System.out.println("3 - random seed(long), something like key, default "+DEFAULT_SEED);					
 					System.out.println("examples");
-					System.out.println("-steg -d image.png - decode data from image into actual directory using seed(key) 4963");					
+					System.out.println("-steg -d image.png - decode data from image into actual directory using seed(key) "+DEFAULT_SEED);					
 					System.out.println("-steg -d image.png c:/data/ 12345  - decode data from image into directory c:/data/ using seed(key) 12345");
+					System.out.println("-steg -d .png - decode data from all *.png images into actual directory using seed(key) "+DEFAULT_SEED);
 				}
 			}
 			//file generation by secure random bytes
@@ -833,12 +1011,12 @@ public class FileEncoder {
 							return;
 						}else
 							seed = Long.parseLong(args[3]);
-					ONE_TIME_PAD(args[1], args[2], seed);
+					ONE_TIME_PAD(args[1], args[2], new Random(seed));
 				}else {					
 					System.out.println("Program Arguments");
 					System.out.println("1 - input file - mandatory");
 					System.out.println("2 - output file - mandatory");
-					System.out.println("3 - random seed(long), something like key, default 4963");
+					System.out.println("3 - random seed(long), something like key, default "+DEFAULT_SEED);
 					System.out.println("");
 					System.out.println("Encryption is easy One Time Pad - like cryptosystem using pseudorandom numbers");
 					System.out.println("The aim is to fast and easy encrypt/decrypt file (text/binary) for purpose to pass files through mail attachment control and such systems which control type of files rather to use it for security purpose (because it use Java pseudorandom number, which are not secure for encryption)");
@@ -920,16 +1098,16 @@ public class FileEncoder {
 				if(args.length>=3) {
 					if(args.length>=4)
 						seed = Long.parseLong(args[3]);
-					GEN_RANDOM_DATA_FILE(args[1], Long.parseLong(args[2]), seed);
+					GEN_RANDOM_DATA_FILE(args[1], Long.parseLong(args[2]), new Random(seed));
 				}else {					
 					System.out.println("Program Arguments");
 					System.out.println("1 - input file - mandatory");
 					System.out.println("2 - file size(long) - mandatory");
-					System.out.println("3 - random seed(long), something like key, default 4963");
+					System.out.println("3 - random seed(long), something like key, default "+DEFAULT_SEED);
 					System.out.println("");
 					System.out.println("generate binary file with random data of selected size");
 					System.out.println("examples");
-					System.out.println("-gen output.bin 1024 		- generate file output.bin of size 1024 with default seed 4963");
+					System.out.println("-gen output.bin 1024 		- generate file output.bin of size 1024 with default seed "+DEFAULT_SEED);
 					System.out.println("-gen output.bin 1024 13245	- generate file output.bin of size 1024 with seed 12345 (same seed generate same data)");
 				}
 			}		
@@ -938,17 +1116,17 @@ public class FileEncoder {
 				if(args.length>=2) {
 					if(args.length>=3)
 						seed = Long.parseLong(args[2]);
-					SECURE_DELETE(args[1], seed);
+					SECURE_DELETE(args[1], new Random(seed));
 				}else {					
 					System.out.println("Program Arguments");
 					System.out.println("1 - input file/folder - mandatory");					
-					System.out.println("2 - random seed(long), default 4963");
+					System.out.println("2 - random seed(long), default "+DEFAULT_SEED);
 					System.out.println("");
 					System.out.println("secure delete mean rewriting the data instead of common delete in system, when only file is marked as delete and the data stay unchanged");
 					System.out.println("function rewrites content and name for file or folder (recursively to all subfolders and files) to random data");
 					System.out.println("used Java random, for more secure it is recommended to run function more times with different seed");
 					System.out.println("examples");
-					System.out.println("-del fileTo.del		- delete file fileTo.del with default seed 4963");
+					System.out.println("-del fileTo.del		- delete file fileTo.del with default seed "+DEFAULT_SEED);
 					System.out.println("-del fileTo.del	12345 	- delete file fileTo.del using seed 12345");
 				}
 			}
@@ -973,4 +1151,655 @@ public class FileEncoder {
 		
 	}
 
+	/*random generating lakes water constants*/
+	public static final Random RANDOM = PRODUCTION?new Random():new Random(DEFAULT_SEED);
+	public static final long MAX_FILE_SIZE = 15_000_000; //max size 15MB, if more file will be splitted to 15MB parts
+	public static final long MIN_FILE_SIZE = 15_000; //min file size 15KB, to prevent very small images
+	public static final int[] LAKE_WATER_RGB = {67, 111, 166};
+	public static final int MAX_SHADE = 50;
+	public static final double WIDTH_HEIGHT_RATIO = 16/9d;
+	public static final double MAX_DATA_IN_IMAGE_RATIO = .9;//0.6;
+	public static final double MIN_DATA_IN_IMAGE_RATIO = .6;//0.3;	
+	public static final String[] LAKES = {
+			"Chilwa",
+			"Chad",
+			"Sibaya",
+			"Kariba",
+			"Victoria",
+			"Tanganyika",
+			"Nakuru",
+			"Chivero",
+			"Guiers",
+			"George",
+			"Albert",
+			"Edward",
+			"Malawi",
+			"Cahora_Bassa",
+			"Kyoga",
+			"Volta",
+			"Zeekoevlei",
+			"Oguta",
+			"Nasser",
+			"Turkana",
+			"Abaya",
+			"Abhe",
+			"Abijata",
+			"Asejire_Reservoir",
+			"Awassa",
+			"Bogoria",
+			"Chamo",
+			"Elmenteita",
+			"Hartbeespoort_Dam_Reservoir",
+			"Ihema",
+			"Natron",
+			"Koka",
+			"Naivasha",
+			"Rweru",
+			"Nubia",
+			"Shala",
+			"Tana",
+			"Ziway",
+			"Afambo",
+			"Aby_Lagoon",
+			"Bangweulu",
+			"Faguibine",
+			"Kivu",
+			"Selingue",
+			"Manzala",
+			"Mweru",
+			"Rukwa",
+			"Tumba",
+			"Upemba",
+			"Eyasi",
+			"Weija",
+			"Jerid",
+			"Mai-Ndombe",
+			"Baringo",
+			"Yoan",
+			"Teli",
+			"Fitri",
+			"Masinga_Reservoir",
+			"Kamburu_Reservoir",
+			"Gitaru_Reservoir",
+			"Kindaruma_Reservoir",
+			"Kimbere_Reservoir",
+			"Burera",
+			"Ruhondo",
+			"Muhazi",
+			"Mugesera",
+			"Sake",
+			"Rwanyakizinga",
+			"Mihindi",
+			"Hago",
+			"Kivumba",
+			"Nasho",
+			"Cyambwe",
+			"Mpanga",
+			"Cyohoha_Sud",
+			"Biwa",
+			"Songkhla",
+			"Rara",
+			"Phewa",
+			"Chuzenji",
+			"Nagase_Reservoir",
+			"Chao",
+			"Miyun_Reservoir",
+			"Kinneret",
+			"Toba",
+			"Dongting",
+			"Dong",
+			"Laguna_de_Bay",
+			"Inawashiro",
+			"Swamp_Tasek_Bera",
+			"Shikotsu",
+			"Toya",
+			"Sagami_Reservoir",
+			"Boraped_Reservoir",
+			"Buhi",
+			"Ebinur",
+			"Alakol",
+			"Boon_Tsagaan",
+			"Bositeng",
+			"Bhojtal",
+			"Chany",
+			"Chienghai",
+			"Chilika",
+			"Dead_Sea",
+			"Akan",
+			"Demirkopru_Dam_Reservoir",
+			"Egridir",
+			"Hirfanli_Dam_Reservoir",
+			"Hulun",
+			"Hungtze",
+			"Hyargas",
+			"Jatiluhur",
+			"Kairakkumskoye_Reservoir",
+			"Kaoyu",
+			"Kaptchagayskoye_Reservoir",
+			"Mashu",
+			"Khanka",
+			"Khantayskoye",
+			"Caspian_Sea",
+			"Kolleru",
+			"Kulundinskoye",
+			"Lanao",
+			"Lugu",
+			"Mafu",
+			"Mingetchaurskoye_Reservoir",
+			"Motosu",
+			"Towada",
+			"Namu",
+			"Ngoring",
+			"Novosibirskoye_Reservoir",
+			"Poyang",
+			"Pyasino",
+			"Qilin",
+			"Sasykkol",
+			"Sayanskoye_Reservoir",
+			"Seletyteniz",
+			"Sevan",
+			"Okutama_Reservoir",
+			"Singkarak",
+			"Aral_Sea",
+			"Taimyr",
+			"Chini",
+			"Tazawa",
+			"Tchardarinskoye_Reservoir",
+			"Tengiz",
+			"Terhiyn_Tsagaan",
+			"Tuz",
+			"Ulu_Lepar_System",
+			"Kawaguchi",
+			"Uvs",
+			"Van",
+			"Viluyskoe_Reservoir",
+			"Wei-shan",
+			"Xiaonanhai",
+			"Yamdrok",
+			"Zaysan",
+			"Zeiskoye_Reservoir",
+			"Beysehir",
+			"Keban_Dam_Reservoir",
+			"Tai",
+			"Buyr",
+			"Evoron",
+			"Hammer",
+			"Har",
+			"Har_Us",
+			"Helmand",
+			"Istada",
+			"Baikal",
+			"Kyaring",
+			"Luang_Sea",
+			"Namak",
+			"Pangong",
+			"Tonle_Sap",
+			"Tangra",
+			"Tega-numa",
+			"Terinam",
+			"Batur",
+			"Ubinskoe",
+			"Ulungur",
+			"Urmia",
+			"Bato",
+			"Ubolratana_Reservoir",
+			"Sapanca",
+			"Inba-numa",
+			"Lower_Seletar_Reservoir",
+			"Bedok_Reservoir",
+			"Lam_Ta_Khong_Reservoir",
+			"Loktak",
+			"Tarbela_Reservoir",
+			"Kurunegala_Reservoir",
+			"Inle",
+			"Ikeda",
+			"Kenyir_Reservoir",
+			"Matano",
+			"Nam_Ngum_Reservoir",
+			"Yuqiao_Reservoir",
+			"Sagar",
+			"Udawalawa_Reservoir",
+			"Beira",
+			"Lop_Nor",
+			"Pomo",
+			"Suwa",
+			"Aydarkul",
+			"Sentarum",
+			"Sarygamysh",
+			"Shardara_Reservoir",
+			"Darbandikhan",
+			"Tharthar",
+			"Kizaki",
+			"Shumarinai",
+			"Hachiro",
+			"Kasumigaura",
+			"Saroma",
+			"Kojima",
+			"Dal",
+			"Saguling",
+			"Ogawara",
+			"Oze",
+			"Shinji",
+			"Nojiri",
+			"Hamana",
+			"Parakrama",
+			"Fateh_Sagar",
+			"Lower",
+			"Qionghai",
+			"Sancha",
+			"Changshou",
+			"Hovsgol",
+			"Abashiri",
+			"The_West",
+			"Balkhash",
+			"Issyk-Kool",
+			"Krasnoyarskoye_Reservoir",
+			"Manasbal",
+			"Taal",
+			"Kamafusa_Reservoir",
+			"Ust-Ilimskoye_Reservoir",
+			"Bratskoye_Reservoir",
+			"West",
+			"Kanhargaov_Reservoir",
+			"Ba_Be",
+			"Tjeuke_meer",
+			"Neusiedler_See",
+			"Attersee",
+			"Balaton",
+			"Maggiore",
+			"Zurich_See",
+			"Geneva",
+			"Loch_Ness",
+			"Skadar",
+			"Lunzer_See",
+			"Windermere",
+			"Trummen",
+			"Malaren",
+			"Hjalmaren",
+			"Vattern",
+			"Vanern",
+			"Inari",
+			"Pielinen",
+			"Paijanne",
+			"Paajarvi",
+			"Arendsee",
+			"Bassenthwaite",
+			"Lough_Beg",
+			"Sheksninskoye_Reservoir",
+			"Bergumermeer",
+			"Bled",
+			"Peipus",
+			"Como",
+			"Coniston",
+			"Ree",
+			"Crummock",
+			"Dargin",
+			"Derwentwater",
+			"Dneprodzerzhinskoye_Reservoir",
+			"Dobskie",
+			"Dusia",
+			"Ennerdale",
+			"Galstas",
+			"Garda",
+			"Gorkovskoye_Reservoir",
+			"Derg",
+			"Hancza",
+			"Haweswater",
+			"Prespa",
+			"Ilmen",
+			"Imandrovskoye_Reservoir",
+			"Kakhovskoye_Reservoir",
+			"Kamskoye_Reservoir",
+			"Kanevskoye_Reservoir",
+			"Kievskoye_Reservoir",
+			"Kisajno",
+			"Ammersee",
+			"Knyazhegubskoye_Reservoir",
+			"Krementchugskoye_Reservoir",
+			"Loch_Leven",
+			"Lower_Lough_Erne",
+			"Lugano",
+			"Mallasvesi",
+			"Niegocin",
+			"Northern_Mamry",
+			"Starnberger_See",
+			"Obelija",
+			"Proletarskoye_Reservoir",
+			"Lubans",
+			"Lucerne",
+			"Rybinsk_Reservoir",
+			"Saratovskoye_Reservoir",
+			"Segozero",
+			"Shlavantas",
+			"Loch_Morar",
+			"Topopyozerskoye_Reservoir",
+			"Traunsee",
+			"Tsimlyanskoye_Reservoir",
+			"Ullswater",
+			"Upper_Lough_Erne",
+			"Vanajavesi",
+			"Mondsee",
+			"Wolfgangsee",
+			"Loch_Shiel",
+			"Velencei-to",
+			"Volgogradskoye_Reservoir",
+			"Votkinskoye_Reservoir",
+			"Vygozersko-Ondskoye_Reservoir",
+			"Wastwater",
+			"Wigry",
+			"Zug",
+			"Geranimovas-Ilzas",
+			"Loch_Awe",
+			"Kurisches_Bay",
+			"Szczecin_Lagoon",
+			"Oulu",
+			"Saimaa",
+			"Ohrid",
+			"Charzykowskie",
+			"Loch_Lomond",
+			"Plitvices",
+			"Trasimeno",
+			"Sniardwy",
+			"Stechlin",
+			"Mjosa",
+			"Constance",
+			"Lough_Neagh",
+			"Varna",
+			"Onega",
+			"Ladoga",
+			"Mozhaysk_Reservoir",
+			"Slapy",
+			"Volvi",
+			"Balta_Alba",
+			"Thingvalla",
+			"Paanajarvi",
+			"G._Dimitrov",
+			"Annecy",
+			"Orta",
+			"Vortsjarv",
+			"Druksiai",
+			"Naroch",
+			"Chervonoje",
+			"Lukomskoje",
+			"Uvildy",
+			"Voronegskoe_Reservoir",
+			"Kujbyshevskoe_Reservoir",
+			"Driyviaty",
+			"Banyoles",
+			"Mendota",
+			"Tahoe",
+			"Michigan",
+			"Superior",
+			"Huron",
+			"Erie",
+			"Ontario",
+			"Winnipeg",
+			"Washington",
+			"Saint-John",
+			"Conesus",
+			"Hemlock",
+			"Honeoye",
+			"Canandaigua",
+			"Keuka",
+			"Seneca",
+			"Cayuga",
+			"Owasco",
+			"Chicot",
+			"Okeechobee",
+			"Chiriqui_Lagoon",
+			"Nicaragua",
+			"Caratasca_Lagoon",
+			"Izabal",
+			"Enriquillo",
+			"Terminos_Lagoon",
+			"Amistad_Reservoir",
+			"Pontchartrain",
+			"Salton_Sea",
+			"Twins",
+			"Canyon",
+			"Saguaro",
+			"Apache",
+			"Roosevelt",
+			"Bartlett",
+			"Mead",
+			"Powell",
+			"Mono",
+			"Milford_Reservoir",
+			"Green_Mountain_Reservoir",
+			"Dillon",
+			"Granby",
+			"Great_Salt",
+			"Goose",
+			"Bear",
+			"Upper_Klamath",
+			"St._Clair",
+			"Abert",
+			"Crater",
+			"Diamond",
+			"Crescent",
+			"Pyramid",
+			"Crane_Prairie_Reservoir",
+			"Fern_Ridge",
+			"Billy_Chinook",
+			"Detroit",
+			"Bas_dOr",
+			"Mille_Lacs",
+			"Nipissing",
+			"Flathead",
+			"Red",
+			"Gouin",
+			"Muskoka",
+			"Rainy",
+			"Abitibi",
+			"Woods",
+			"Pipmuacan",
+			"Nipigon",
+			"Seul",
+			"Manitoba",
+			"Mistassini",
+			"Dauphin",
+			"Opinaca_Reservoir",
+			"Kootenay",
+			"Winnipegosis",
+			"Cedar",
+			"Melville",
+			"Island",
+			"Moose",
+			"La_Grande_3_Reservoir",
+			"La_Grande_4_Reservoir",
+			"Smallwood_Reservoir",
+			"Michikamau",
+			"Gods",
+			"Manicouagan_Reservoir",
+			"Dore",
+			"Ronge",
+			"Bienville",
+			"Lesser_Slave",
+			"Clearwaters",
+			"Cree",
+			"Reindeer",
+			"Becharof",
+			"Wollaston",
+			"Claire",
+			"Aishihik",
+			"Athabasca",
+			"Atlin",
+			"Iliamna",
+			"Clark",
+			"Kasba",
+			"Nueltin",
+			"Great_Slave",
+			"Yathkyed",
+			"Dubawnt",
+			"Martre",
+			"La_Grande_2_Reservoir",
+			"Baker",
+			"Aberdeen",
+			"Amadjuak",
+			"Takiyuak",
+			"Netilling",
+			"Selawik",
+			"Eskimos",
+			"Teshekpuk",
+			"Falcon_International_Reservoir",
+			"Williston",
+			"Great_Bear",
+			"Western_Brook_Pond",
+			"Hazen",
+			"Southern_Indian",
+			"Great_Central",
+			"Caniapiscau_Reservoir",
+			"Northwood",
+			"Smith_Mountain",
+			"Champlain",
+			"Webster",
+			"Kezar",
+			"Amatitlan",
+			"Simcoe",
+			"Baptiste",
+			"Amisk",
+			"Wabamun",
+			"Miquelon",
+			"Shuswap",
+			"Memphremagog",
+			"Massawippi",
+			"Garrow",
+			"Okanagan",
+			"Wood",
+			"Skaha",
+			"Kamloops",
+			"Buttle",
+			"Kejimkujik",
+			"Buffalo_Pound",
+			"Diefenbaker",
+			"Chapala",
+			"Managua",
+			"Harveys",
+			"Taupo",
+			"Burley_Griffin",
+			"Rotorua",
+			"Eyre",
+			"Murray",
+			"Frome",
+			"Alexandrina",
+			"Amadeus",
+			"Austin",
+			"Gairdner",
+			"Torrens",
+			"Broa_Reservoir",
+			"Nahuel_Huapi",
+			"Ezequiel_Ramos_Mexia_Reservoir",
+			"Titicaca",
+			"Valencia",
+			"San_Roque_Reservoir",
+			"Lacar",
+			"Ypacarai",
+			"Rocha",
+			"Sobradinho_Reservoir",
+			"Todos_los_Santos",
+			"Salto_Grande",
+			"Patzcuaro",
+			"Maracaibo",
+			"Gatun",
+			"Bayano",
+			"Guri_Reservoir",
+			"Balbina_Reservoir",
+			"Tucurui_Reservoir",
+			"Poechos_Reservoir",
+			"Samuel_Reservoir",
+			"Junin",
+			"Poopo",
+			"Agua_Vermelha_Reservoir",
+			"Volta_Grande_Reservoir",
+			"Ilha_Solteira_Reservoir",
+			"Tres_Irmaos_Reservoir",
+			"Jupia_Reservoir",
+			"Nova_Avanhandava_Reservoir",
+			"Promissao_Reservoir",
+			"Ibitinga_Reservoir",
+			"Bariri_Reservoir",
+			"Colorado_Lagoon",
+			"Porto_Primavera_Reservoir",
+			"Itaipu_Reservoir",
+			"Barra_Bonita_Reservoir",
+			"Taquarucu_Reservoir",
+			"Rosana_Reservoir",
+			"Capivara_Reservoir",
+			"Salto_Grande_Reservoir",
+			"Xavantes_Reservoir",
+			"Jurumirin_Reservoir",
+			"Billings_Reservoir",
+			"Yacyreta_P.P._Reservoir",
+			"Rio_Hondo_Reservoir",
+			"Ibera",
+			"Mar_Chiquita",
+			"Patos_Lagoon",
+			"Rio_Tercero_I_Reservoir",
+			"Mirim_Lagoon",
+			"Diamante_Lagoon",
+			"Chascomus",
+			"Cochico",
+			"Epecuen",
+			"Casa_de_Piedra_Reservoir",
+			"Los_Barreales_Reservoir",
+			"Mari_Menuco_Reservoir",
+			"Pellegrini",
+			"Alumine",
+			"Arroyito_Reservoir",
+			"Qullen",
+			"Huechulaufquen",
+			"Rinihue",
+			"Piedra_Del_Aguila_Reservoir",
+			"Alicura_Reservoir",
+			"Ranco",
+			"Llanquihue",
+			"Puelo",
+			"Rivadavia",
+			"Menendez",
+			"Futalaufquen",
+			"Amutui_Quimey_Reservoir",
+			"La_Plata",
+			"Fontana",
+			"Musters_Lago",
+			"Colhue_Huapi",
+			"General_Carrera",
+			"O_Higgins",
+			"Cardiel",
+			"Viedma",
+			"Argentino",
+			"Fagnano"}; 
+}
+
+
+class RAFBuffer{
+	static int BUFFER_SIZE = 65_536;
+	RandomAccessFile raf;
+	byte[] buffer = new byte[BUFFER_SIZE];	
+	int position = 0;
+	int max = 0;
+	
+	int read() throws IOException{
+		if(position==max){
+			max = raf.read(buffer);
+			position = 0;
+		}
+		//System.out.println(position);
+		return max>0?buffer[position++]&0xff:-1;
+	}
+	
+	void write(int b) throws IOException{
+		if(position==BUFFER_SIZE){
+			flush();
+		}
+		buffer[position++] = (byte)b;		
+	}
+	
+	void flush() throws IOException{
+		raf.write(buffer, 0, position);
+		position = 0;
+	} 
+	
+	RAFBuffer(RandomAccessFile raf) {
+		this.raf = raf;
+	}
 }

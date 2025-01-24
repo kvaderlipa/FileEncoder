@@ -15,50 +15,36 @@ public class ImageByteStreamReader{
     private int bit;
     private int position;
     private int BGR; // 0 - blue, 1 - green, 2 - red
-    
-    /* old mixing method
-    private ArrayList<Integer> transX;
-    private ArrayList<Integer> transY;
-    */
-    private int[] pixelMix;
-
-    private BufferedImage img;
-    
-    public ImageByteStreamReader(BufferedImage img) {
-        this(img, 4963);
-    }
-    
-    public ImageByteStreamReader(BufferedImage img, long seed) {
-        this.img = img;         
+    private int[] matrix = null;
+    private int[] pixelMix;    
+    private int width;
+    private int height;
+        
+    public ImageByteStreamReader(BufferedImage img, Random r) {
+    	this.width = img.getWidth();
+    	this.height = img.getHeight();
+    	//load whole matrix
+    	matrix = new int[width*height];        
+    	img.getRGB(0, 0, width, height, matrix, 0, width);
+    	
+        this.r = r;
         bit = 0;
         position = 0;
         BGR = 0;
-        
-        r = new Random(seed);
-        pixelMix = new int[img.getWidth()*img.getHeight()];
+                
+        pixelMix = new int[width*height];
         for (int i = 0; i < pixelMix.length; i++)
         	pixelMix[i] = i;
         ImageByteStreamWriter.shuffle(pixelMix, r);
-        /*
-        transX = new ArrayList<>(img.getWidth());
-        transY = new ArrayList<>(img.getHeight());
-        for (int i = 0; i < img.getWidth(); i++)
-            transX.add(i);
-        for (int i = 0; i < img.getHeight(); i++)
-            transY.add(i);
-        Collections.shuffle(transX, r);        
-        Collections.shuffle(transY, r);
-        */
     }
-    
-    
+        
+    int color;
     public int read(){
-        int ret = 0;
-        int color;
+        int ret = 0;        
         
         for (int i = 0; i < 8; i++) {
             if(BGR==3){               //tocime RGB 
-                if(++position==img.getWidth()*img.getHeight()){ //tocime position
+                if(++position==width*height){ //tocime position
                     if(++bit==8)                //akpresvihneme bity koniec
                         return -1;
                     position = 0;                    
@@ -66,10 +52,7 @@ public class ImageByteStreamReader{
                 BGR = 0;
             }
             
-            /* old mixing
-            color = img.getRGB(transX.get(position%img.getWidth()), transY.get(position/img.getWidth()));
-            */
-            color = img.getRGB(pixelMix[position]%img.getWidth(), pixelMix[position]/img.getWidth());
+            color = matrix[trans(pixelMix[position]%width, pixelMix[position]/width)];
                         
             color >>= BGR*8;    //posunieme o RGB
             color >>= bit;      //posunieme o bit
@@ -84,6 +67,10 @@ public class ImageByteStreamReader{
         return (ret^r.nextInt())&255;
     }
     
+    private int trans(int x, int y){    	
+    	return x+y*width;
+    }
+    
     public static void main(String[] args){
         BufferedImage img = null;
         try {
@@ -92,7 +79,7 @@ public class ImageByteStreamReader{
             e.printStackTrace();
         }
         
-        ImageByteStreamReader ibsr = new ImageByteStreamReader(img);
+        ImageByteStreamReader ibsr = new ImageByteStreamReader(img, new Random(FileEncoder.DEFAULT_SEED));
         int r, count = 0;
         while((r = ibsr.read())!=-1){
             System.out.print((char)r);

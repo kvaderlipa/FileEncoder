@@ -29,6 +29,7 @@ import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 import java.awt.event.ActionEvent;
 
 public class Frame extends JFrame {
@@ -245,7 +246,7 @@ public class Frame extends JFrame {
 										break;
 									case 8:	//"GENERATE RANDOM DATA"
 										addConsole("Generate random DATA started (SEED "+txtRNDSeed.getText()+") - "+txtFileSize.getText()+" Bytes - >"+txtOutputFile.getText());
-										FileEncoder.GEN_RANDOM_DATA_FILE(txtOutputFile.getText(), Integer.parseInt(txtFileSize.getText()), Integer.parseInt(txtRNDSeed.getText()));
+										FileEncoder.GEN_RANDOM_DATA_FILE(txtOutputFile.getText(), Integer.parseInt(txtFileSize.getText()), new Random(Long.parseLong(txtRNDSeed.getText())));
 										if(!FileEncoder.cancel) {
 											addConsole("Generating random DATA successfully finished");
 											JOptionPane.showMessageDialog(frame, "Generating random DATA successfully finished", "OK - success", JOptionPane.INFORMATION_MESSAGE);
@@ -278,7 +279,7 @@ public class Frame extends JFrame {
 										break;
 									case 11://"ONE TIME PAD - RND STREAM KEY"
 										addConsole("ONE TIME PAD File encryption (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText()+" - >"+txtOutputFile.getText());
-										FileEncoder.ONE_TIME_PAD(txtInputFile.getText(), txtOutputFile.getText(), Integer.parseInt(txtRNDSeed.getText()));
+										FileEncoder.ONE_TIME_PAD(txtInputFile.getText(), txtOutputFile.getText(), new Random(Integer.parseInt(txtRNDSeed.getText())));
 										if(!FileEncoder.cancel) {
 											addConsole("ONE TIME PAD ecryption successfully finished");
 											JOptionPane.showMessageDialog(frame, "ONE TIME PAD ecryption successfully finished", "OK - success", JOptionPane.INFORMATION_MESSAGE);
@@ -289,7 +290,7 @@ public class Frame extends JFrame {
 										break;
 									case 12://"SECURE DELETE
 										addConsole("SECURE DELETE - REWRITE FILE/FOLDER CONTENT WITH RANDOM DATA (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText());
-										FileEncoder.SECURE_DELETE(txtInputFile.getText(), Long.parseLong(txtRNDSeed.getText()));										
+										FileEncoder.SECURE_DELETE(txtInputFile.getText(), new Random(Long.parseLong(txtRNDSeed.getText())));										
 										if(!FileEncoder.cancel) {
 											addConsole("SECURE DELETE - SECURE DELETE successfully finished");
 											JOptionPane.showMessageDialog(frame, "SECURE DELETE - SECURE DELETE successfully finished", "OK - success", JOptionPane.INFORMATION_MESSAGE);
@@ -311,7 +312,7 @@ public class Frame extends JFrame {
 										break;
 									case 14://"STEG - DECODE FROM IMAGE
 										addConsole("STEG - DECODE FROM IMAGE (SEED "+txtRNDSeed.getText()+") - "+txtInputFile.getText()+" - >"+txtOutputFile.getText());
-										FileEncoder.DECODE_FILE_FROM_IMAGE(txtInputFile.getText(), txtOutputFile.getText(), Long.parseLong(txtRNDSeed.getText()));										
+										FileEncoder.DECODE_FILE_FROM_IMAGE(txtInputFile.getText(), txtOutputFile.getText(), new Random(Long.parseLong(txtRNDSeed.getText())));										
 										if(!FileEncoder.cancel) {
 											addConsole("STEG - DECODE FROM IMAGE successfully finished");
 											JOptionPane.showMessageDialog(frame, "STEG - DECODE FROM IMAGE successfully finished", "OK - success", JOptionPane.INFORMATION_MESSAGE);
@@ -440,7 +441,7 @@ public class Frame extends JFrame {
 		txtFileSize.setColumns(10);
 		
 		txtRNDSeed = new JTextField();
-		txtRNDSeed.setText("4963");
+		txtRNDSeed.setText(FileEncoder.DEFAULT_SEED+"");
 		txtRNDSeed.setEnabled(false);
 		txtRNDSeed.setColumns(10);
 		

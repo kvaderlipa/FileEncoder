@@ -12,107 +12,57 @@ public class ImageByteStreamWriter{
 	private Random r;
     private int bit;
     private int position;
+    private int[] matrix = null;    
     private int BGR; // 0 - blue, 1 - green, 2 - red
-    
-    /* old method by columns and rows mixing
-    private ArrayList<Integer> transX;
-    private ArrayList<Integer> transY;
-     */
-    //new metwhod for all pixel mixing
+    private int width;
+    private int height;
+        
     private int[] pixelMix;
     
     
     private final BufferedImage img;
-    
-    public ImageByteStreamWriter(BufferedImage img) {
-        this(img, 4963);
-    }
-    
+        
     public int getBitSize(){
         return bit;
     }
+        
+    private int trans(int x, int y){    	
+    	return x+y*width;
+    }    
     
-    // put random data to all pixels to complete actual bit, to prevent any detection of ending data
-    public void bitAlign(){
-    	int color;
-        int pom, vec;
-        int c;
+    public ImageByteStreamWriter(BufferedImage img, Random r) {
+    	this.width = img.getWidth();
+    	this.height = img.getHeight();
+    	//load whole matrix
+    	matrix = new int[width*height];        
+    	img.getRGB(0, 0, width, height, matrix, 0, width);
         
-        while(true) {
-        	c = r.nextInt();
-        	
-            if(BGR==3){      
-                if(++position==img.getWidth()*img.getHeight()){ //tocime position
-                    break;              
-                }            
-                BGR = 0;
-            }
-            
-            /* old method
-            color = img.getRGB(transX.get(position%img.getWidth()), transY.get(position/img.getWidth()));
-            */
-            color = img.getRGB(pixelMix[position]%img.getWidth(), pixelMix[position]/img.getWidth());
-            vec = 1;              
-            vec <<= bit;
-            vec <<= BGR*8; // najdeme vektor, to jest v inte 1 iba tam ktory bit riesime
-            
-            pom = c;            
-            pom &= 1;            //zistime ci ideme zapisovat 0 alebo 1
-            if(pom==1)          //ak 1, tak or zapise 1 na prislusne miesto
-                color |= vec;
-            else
-                color &= ~vec;  // ak 0, tak & nam na inverznom vektore urobi z bitu 0 HAHH, genialne, ale myslim si, ze to isto pojde aj lahsie HAHHA            
-            /*old
-            img.setRGB(transX.get(position%img.getWidth()), transY.get(position/img.getWidth()), color);
-            */
-            img.setRGB(pixelMix[position]%img.getWidth(), pixelMix[position]/img.getWidth(), color);
-            BGR++;            
-        }
-    }
-        
-    public ImageByteStreamWriter(BufferedImage img, long seed) {
-        this.img = img;
+    	this.img = img;
+        this.r = r;
         bit = 0;
         position = 0;
         BGR = 0;
-        
-        r = new Random(seed);
-        pixelMix = new int[img.getWidth()*img.getHeight()];
+                
+        pixelMix = new int[width*height];
         for (int i = 0; i < pixelMix.length; i++)
         	pixelMix[i] = i;
-        shuffle(pixelMix, r);
-        /* old method
-        transX = new ArrayList<>(img.getWidth());
-        transY = new ArrayList<>(img.getHeight());
-        for (int i = 0; i < img.getWidth(); i++)
-            transX.add(i);
-        for (int i = 0; i < img.getHeight(); i++)
-            transY.add(i);
-        Collections.shuffle(transX, r);        
-        Collections.shuffle(transY, r);
-        */
+        shuffle(pixelMix, r);        
     }
     
-    
-    public void write(int c) throws IOException{             
-        int color;
-        int pom, vec;
+   // este vyskusat na zrychlenie, ze budem mat maticu farieb a az potom ich nahram do obrazka, lebo takto po bitoch meni byty v img objekte asi bude pomale,,, to by mohlo ist
+    int pom, vec;
+    public void write(int c) throws IOException{        
         c ^= r.nextInt(); // One time PAD to randomize data
         
         for (int i = 0; i < 8; i++) {
             if(BGR==3){               //tocime RGB 
-                if(++position==img.getWidth()*img.getHeight()){ //tocime position
+                if(++position==width*height){ //tocime position
                     if(++bit==8)                //akpresvihneme bity koniec
                         throw new IOException("Image full, no space in image.");
                     position = 0;                    
                 }            
                 BGR = 0;
             }
-            
-            /* old method
-            color = img.getRGB(transX.get(position%img.getWidth()), transY.get(position/img.getWidth()));
-            */
-            color = img.getRGB(pixelMix[position]%img.getWidth(), pixelMix[position]/img.getWidth());
                         
             vec = 1;              
             vec <<= bit;
@@ -122,15 +72,16 @@ public class ImageByteStreamWriter{
             pom >>= i;
             pom &= 1;            //zistime ci ideme zapisovat 0 alebo 1
             if(pom==1)          //ak 1, tak or zapise 1 na prislusne miesto
-                color |= vec;
+            	matrix[trans(pixelMix[position]%width, pixelMix[position]/width)] |= vec;
             else
-                color &= ~vec;  // ak 0, tak & nam na inverznom vektore urobi z bitu 0 HAHH, genialne, ale myslim si, ze to isto pojde aj lahsie HAHHA
-            /*old
-            img.setRGB(transX.get(position%img.getWidth()), transY.get(position/img.getWidth()), color);
-            */
-            img.setRGB(pixelMix[position]%img.getWidth(), pixelMix[position]/img.getWidth(), color);
+            	matrix[trans(pixelMix[position]%width, pixelMix[position]/width)] &= ~vec;  // ak 0, tak & nam na inverznom vektore urobi z bitu 0 HAHH, genialne, ale myslim si, ze to isto pojde aj lahsie HAHHA
+
             BGR++;            
         }
+    }
+    
+    public void trans2img(){
+    	img.setRGB(0, 0, width, height, matrix, 0, width);
     }
     
     //shuffle all pixels to positions
