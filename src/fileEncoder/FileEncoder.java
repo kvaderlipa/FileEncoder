@@ -51,6 +51,7 @@ public class FileEncoder {
 	//
 	static final long DEFAULT_SEED = 4963;
 	static final long INIT_CYCLES = 4963;
+	static final int BUFFER_SIZE = 65536;
 	
 	static long cnt = 0;
 	public static void GEN_SECURE_RANDOM_DATA_FILE(String output, final long size, int threadCount) throws Exception {
@@ -161,7 +162,7 @@ public class FileEncoder {
 		progress = 0;
 		//		
 		
-		byte[] buffer = new byte[65536];
+		byte[] buffer = new byte[BUFFER_SIZE];
 		
 		// initialize
 		for (int i = 0; i < INIT_CYCLES; i++)
@@ -230,7 +231,7 @@ public class FileEncoder {
 		cancel = false;
 		progress = 0;
 		//		
-		byte[] buffer = new byte[65536];
+		byte[] buffer = new byte[BUFFER_SIZE];
 		List<File> list = new LinkedList<File>();
 		totalSize = 0;//will be filled by total size after getDirFiles is called
 		File file = new File(input);
@@ -269,8 +270,8 @@ public class FileEncoder {
 		cancel = false;
 		progress = 0;
 				
-		byte[] buffer = new byte[65536];
-		byte[] xor = new byte[65536];
+		byte[] buffer = new byte[BUFFER_SIZE];
+		byte[] xor = new byte[buffer.length];
 		
 		// initialize
 		for (int i = 0; i < INIT_CYCLES; i++)
@@ -285,7 +286,7 @@ public class FileEncoder {
 			for (int j = 0; j < i; j++)
 				buffer[j] ^= xor[j]; 
 			racw.write(buffer, 0, i);
-			progress = (int)((double)racr.getFilePointer()/racr.length()*100);
+			//progress = (int)((double)racr.getFilePointer()/racr.length()*100);
 		}
 		racr.close();
 		racw.close();	
@@ -326,7 +327,7 @@ public class FileEncoder {
         	RAFBuffer rafB = new RAFBuffer(raf);
         	        	
         	//if needed to split determine parts count, if defined by user output image, must be managed by user
-        	int parts = 0;
+        	int parts = 1;
         	if(img!=null){
         		//parts = (int)Math.ceil((double)raf.length()/(img.getWidth()*img.getHeight()*3+260));
         	}else{
@@ -499,8 +500,8 @@ public class FileEncoder {
 		cancel = false;
 		progress = 0;
 		//
-		byte[] buffer = new byte[65536];
-		byte[] xor = new byte[65536];
+		byte[] buffer = new byte[BUFFER_SIZE];
+		byte[] xor = new byte[buffer.length];
 		int i, k;
                 RandomAccessFile raci = new RandomAccessFile(input, "r");
                 RandomAccessFile rack = new RandomAccessFile(key, "r");
@@ -1011,11 +1012,13 @@ public class FileEncoder {
 							return;
 						}else
 							seed = Long.parseLong(args[3]);
-					ONE_TIME_PAD(args[1], args[2], new Random(seed));
+					//long time = System.currentTimeMillis();
+					ONE_TIME_PAD(args[1], args[2], new Random(seed));					
+					//System.out.println(System.currentTimeMillis()-time+" milis took process");
 				}else {					
 					System.out.println("Program Arguments");
 					System.out.println("1 - input file - mandatory");
-					System.out.println("2 - output file - mandatory");
+					System.out.println("2 - output file - mandatory, using same file and will be overwritten directly");
 					System.out.println("3 - random seed(long), something like key, default "+DEFAULT_SEED);
 					System.out.println("");
 					System.out.println("Encryption is easy One Time Pad - like cryptosystem using pseudorandom numbers");
