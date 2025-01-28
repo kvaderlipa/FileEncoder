@@ -3,9 +3,13 @@ import java.awt.EventQueue;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
@@ -26,6 +30,14 @@ import javax.imageio.ImageIO;
  * @author 4900063
  *
  * TODO
+ * DONE urob enc/dec do morseovej abecedy, 
+ * DONE				v buffry by citalo po pismene, nie po riadku (ak by bola neriadkovana, by padlo na pamat)
+ * DONE				ak enter, tak zapis enter, 
+ * DONE				ak nenajde, tak error a napisat co
+ * DONE				oddelovac pismen / slov //
+ * source	https://morsecode.world/international/morse2.html
+ * 
+ * este by sa dalo zrychlit tak, zevypocita kolko bitov a maticou by preslo iba raz, teraz sa to toci po jednom bite cela matica,, cize ak napr. by vypocitalo 5bitov, tak by netocilo maticu 5 krat ale iba raz
  *DONE 		steg zrychlenie, urobit cez maticu intov, je to rychlejsie
  * 		 
  *  	IN PROGRESS potom pri stegano, mozno dat moznost, ze prekonvertuje subor na obrazok, urobi taky velky ako treba, dalo by sa potom rychlo takto do obrazka konvertovat ay sa to dalo cez web bez problemov posielat
@@ -35,7 +47,7 @@ import javax.imageio.ImageIO;
  *DONE		- asi koli jednoduchosti, ak je -steg a za nim len jeden parameter, beriez, ze automaticky generovat, ak chcem specificky seed, tak dam dve pomlcky a seed - - 455
  *DOME		ak dame -steg -d .png tak dekoduje vstky subory konciace .png			
  *  
- * 		porozmyslat nad one time pad s moznostou prepis, kde by priamo prepisovlo data, aby sa nedali spatne dostat spat, tu ma zmysel aj adresar, mozno tabulka s nazvami random
+ *DONE bez adresarov 		porozmyslat nad one time pad s moznostou prepis, kde by priamo prepisovlo data, aby sa nedali spatne dostat spat, tu ma zmysel aj adresar, mozno tabulka s nazvami random
  * 		porozmyslat AES a prepis, co by bol unosware, ;-)) a tiez rekurzivne na adresare, nahodne heslo a cez public key zasifrovat a vytvorit subor so zasifrovanym heslom
  * 		
  */
@@ -837,6 +849,113 @@ public class FileEncoder {
 		//
 	}
 	
+	public static void MORSEenc(String input, String output) throws IOException {		
+		//
+		inProgress = true;
+		cancel = false;
+		progress = 0;
+		cnt = 0;
+		//
+		File f = new File(input);
+		FileReader fr = new FileReader(f);
+		FileWriter fw = new FileWriter(output);
+		BufferedReader br = new BufferedReader(fr);
+		BufferedWriter bw = new BufferedWriter(fw);
+		
+		int i;
+		String str = null, str2;
+		while((i=br.read())!=-1 && !cancel) {
+			if(i=='\n' || i=='\r')
+				bw.write(i);
+			else{
+				if(i==' '){
+					if(str==null || !str.equals(" "))//prevent more white spaces
+						bw.write(MORSE_CHAR_DELIMITER); //because one / is put by end char
+					else
+						bw.write(MORSE_WORD_DELIMITER);
+					str = (char)i+"";
+				}else{
+					str = ((char)i+"").toUpperCase();
+					if((str2 = STRING_2_MORSE_MAP.get(str))!=null){
+						bw.write(str2+MORSE_CHAR_DELIMITER);
+					}else{						
+						if(i=='<'){ //must begin and end with braces <>							
+							while((i=br.read())!=-1 && i!='>' && str.length()<100){ //<100 because can fail on memmory because if you get < and MBs of next characters
+								if(i==-1)
+									throw new IOException("Error, there is no MORSE code:'"+str+"''");
+								str += ((char)i+"").toUpperCase();
+							}
+							str += (char)i+"";
+							if((str2 = STRING_2_MORSE_MAP.get(str.toUpperCase()))!=null)
+								bw.write(str2+MORSE_CHAR_DELIMITER);
+							else
+								throw new IOException("Error, there is no MORSE code:'"+str+"''");
+						}else{
+							throw new IOException("Error, there is no MORSE code:'"+str+"'");
+						}
+					}
+				}
+			}
+			//
+			if(++cnt%10000==1)
+				progress = (int)((double)cnt/f.length()*100);
+			//
+		}
+		br.close();
+		bw.close();
+		//		
+		inProgress = false;
+		//
+	}
+	
+	public static void MORSEdec(String input, String output) throws IOException {		
+		//
+		inProgress = true;
+		cancel = false;
+		progress = 0;
+		cnt = 0;
+		//
+		File f = new File(input);
+		FileReader fr = new FileReader(f);
+		FileWriter fw = new FileWriter(output);
+		BufferedReader br = new BufferedReader(fr);
+		BufferedWriter bw = new BufferedWriter(fw);
+		
+		int i;
+		String str = null, str2;
+		while((i=br.read())!=-1 && !cancel) {
+			if(i=='\n' || i=='\r')
+				bw.write(i);
+			else{
+				str = (char)i+"";
+				if(str.equals(MORSE_CHAR_DELIMITER))
+					bw.write(" ");
+				else{
+					while((i=br.read())!=-1 && i!=MORSE_CHAR_DELIMITER.charAt(0) && str.length()<100){ //<100 because can fail on memmory because if you get < and MBs of next characters
+						if(i==-1)
+							throw new IOException("Error, there is no MORSE code:'"+str+"''");
+						if(i!=MORSE_CHAR_DELIMITER.charAt(0))
+							str += ((char)i+"").toUpperCase();
+					}
+					str2 = MORSE_2_STRING_MAP.get(str);
+					if(str2!=null)
+						bw.write(str2);
+					else
+						throw new IOException("Error, there is no MORSE code:'"+str+"''");
+				}							
+			}
+			//
+			if(++cnt%10000==1)
+				progress = (int)((double)cnt/f.length()*100);
+			//
+		}
+		br.close();
+		bw.close();
+		//		
+		inProgress = false;
+		//
+	}
+	
 	public static void main(String[] args) throws Exception {	
 	
 		/*
@@ -1029,7 +1148,30 @@ public class FileEncoder {
 					System.out.println("For encryption by key file use command");
 					System.out.println("-enc input.file output.file -key key.file");
 				}
-			}			
+			}
+			//Morse encoding/decoding
+			if(args[0].toLowerCase().equals("-morse")) {
+				if(args.length>=3) {
+					if(args.length>=4 && args[1].toLowerCase().equals("-d")) {
+						//decoding
+						MORSEdec(args[2], args[3]);
+					}else{
+						//encoding
+						MORSEenc(args[1], args[2]);
+					}
+				}else {					
+					System.out.println("Program Arguments");
+					System.out.println("1 - input file - mandatory");
+					System.out.println("2 - output file - mandatory");		
+					System.out.println("");
+					System.out.println("encode input file (text) to output text file morse encoded");
+					System.out.println("use -d for for decoding input morse text file to text file");
+					System.out.println("examples");
+					System.out.println("-morse input.txt b2.txt");
+					System.out.println("-morse -d b2.txt input.txt");
+				}
+			}
+			
 			//base2 encoding/decoding
 			if(args[0].toLowerCase().equals("-base2") || args[0].toLowerCase().equals("-b2")) {
 				if(args.length>=3) {
@@ -1142,6 +1284,7 @@ public class FileEncoder {
 			System.out.println("-base2  - base2 encoding");			
 			System.out.println("-base16 - base16 encoding");			
 			System.out.println("-base64 - base64 encoding");
+			System.out.println("-morse 	- morse encoding");
 			System.out.println("-gen 	- Random data generating");
 			System.out.println("-sgen 	- Secure random data generating");
 			System.out.println("-freq 	- Frequency analysis of binary file");
@@ -1770,9 +1913,242 @@ public class FileEncoder {
 			"Cardiel",
 			"Viedma",
 			"Argentino",
-			"Fagnano"}; 
-}
+			"Fagnano"};
+	
+	
+	public static final String MORSE_CHAR_DELIMITER = "/";
+	public static final String MORSE_WORD_DELIMITER = "// ";
+	
+	public static final String[][] MORSE_2_STRING = {
+			//LETTER
+			{".-","A"},
+			{"-...","B"},
+			{"-.-.","C"},
+			{"-..","D"},
+			{".","E"},
+			{"..-.","F"},
+			{"--.","G"},
+			{"....","H"},
+			{"..","I"},
+			{".---","J"},
+			{"-.-","K"},
+			{".-..","L"},
+			{"--","M"},
+			{"-.","N"},
+			{"---","O"},
+			{".--.","P"},
+			{"--.-","Q"},
+			{".-.","R"},
+			{"...","S"},
+			{"-","T"},
+			{"..-","U"},
+			{"...-","V"},
+			{".--","W"},
+			{"-..-","X"},
+			{"-.--","Y"},
+			{"--..","Z"},
+			//DIGIT
+			{"-----","0"},
+			{".----","1"},
+			{"..---","2"},
+			{"...--","3"},
+			{"....-","4"},
+			{".....","5"},
+			{"-....","6"},
+			{"--...","7"},
+			{"---..","8"},
+			{"----.","9"},
+			//PUNCTUATION MARK
+			{".-...","&"},
+			{".----.","'"},
+			{".--.-.","@"},
+			{"-.--.-",")"},
+			{"-.--.","("},
+			{"---...",":"},
+			{"--..--",","},
+			{"-...-","="},
+			{"-.-.--","!"},
+			{".-.-.-","."},
+			{"-....-","-"},
+			{"------..-.-----","%"},
+			{".-.-.","+"},
+			{".-..-.","\""},
+			{"..--..","?"},
+			{"-..-.","/"},
+			//ACCENTED LETTER
+			{".--.-","À"},
+			//{".--.-","Å"},
+			{".-.-","Ä"},
+			//{".-.-","Ą"},
+			//{".-.-","Æ"},
+			{"-.-..","Ć"},
+			//{"-.-..","Ĉ"},
+			//{"-.-..","Ç"},
+			{"----","CH"},
+			//{"----","Ĥ"},
+			//{"----","Š"},
+			{"..-..","Đ"},
+			//{"..-..","É"},
+			//{"..-..","Ę"},
+			{"..--.","Ð"},
+			{".-..-","È"},
+			//{".-..-","Ł"},
+			{"--.-.","Ĝ"},
+			{".---.","Ĵ"},
+			{"--.--","Ń"},
+			//{"--.--","Ñ"},
+			{"---.","Ó"},
+			//{"---.","Ö"},
+			//{"---.","Ø"},
+			{"...-...","Ś"},
+			{"...-.","Ŝ"},
+			{".--..","Þ"},
+			{"..--","Ü"},
+			//{"..--","Ŭ"},
+			{"--..-.","Ź"},
+			{"--..-","Ż"},
+			//PROSIGN (some are in collision with accented letter, I prefer accented letter)
+			{"........","<HH>"},
+			{"...-.-","<VA>"},
+			//{"...-.","<VE>"},
+			//{".-.-","<AA>"},
+			//{".-.-.","<AR>"},
+			//{".-...","<AS>"},
+			{"-...-.-","<BK>"},
+			//{"-...-","<BT>"},
+			{"-.-..-..","<CL>"},
+			{"-.-.-","<CT>"},
+			{"-..---","<DO>"},
+			//{"-.-.-","<KA>"},
+			//{"-.--.","<KN>"},
+			//{"...-.-","<SK>"},
+			//{"...-.","<SN>"},
+			{"...---...","<SOS>"}
 
+			
+	};		
+	
+	public static final String[][] STRING_2_MORSE = {
+			//LETTER
+			{"A", ".-"},
+			{"B", "-..."},
+			{"C", "-.-."},
+			{"D", "-.."},
+			{"E", "."},
+			{"F", "..-."},
+			{"G", "--."},
+			{"H", "...."},
+			{"I", ".."},
+			{"J", ".---"},
+			{"K", "-.-"},
+			{"L", ".-.."},
+			{"M", "--"},
+			{"N", "-."},
+			{"O", "---"},
+			{"P", ".--."},
+			{"Q", "--.-"},
+			{"R", ".-."},
+			{"S", "..."},
+			{"T", "-"},
+			{"U", "..-"},
+			{"V", "...-"},
+			{"W", ".--"},
+			{"X", "-..-"},
+			{"Y", "-.--"},
+			{"Z", "--.."},
+			//DIGIT
+			{"0", "-----"},
+			{"1", ".----"},
+			{"2", "..---"},
+			{"3", "...--"},
+			{"4", "....-"},
+			{"5", "....."},
+			{"6", "-...."},
+			{"7", "--..."},
+			{"8", "---.."},
+			{"9", "----."},
+			//PUNCTUATION MARK
+			{"&", ".-..."},
+			{"'", ".----."},
+			{"@", ".--.-."},
+			{")", "-.--.-"},
+			{"(", "-.--."},
+			{":", "---..."},
+			{",", "--..--"},
+			{"=", "-...-"},
+			{"!", "-.-.--"},
+			{".", ".-.-.-"},
+			{"-", "-....-"},
+			{"%", "------..-.-----"},
+			{"+", ".-.-."},
+			{"\"", ".-..-."},
+			{"?", "..--.."},
+			{"/", "-..-."},
+			//ACCENTED LETTER
+			{"À", ".--.-"},
+			{"Å", ".--.-"},
+			{"Ä", ".-.-"},
+			{"Ą", ".-.-"},
+			{"Æ", ".-.-"},
+			{"Ć", "-.-.."},
+			{"Ĉ", "-.-.."},
+			{"Ç", "-.-.."},
+			//{"CH", "----"},
+			{"Ĥ", "----"},
+			{"Š", "----"},
+			{"Đ", "..-.."},
+			{"É", "..-.."},
+			{"Ę", "..-.."},
+			{"Ð", "..--."},
+			{"È", ".-..-"},
+			{"Ł", ".-..-"},
+			{"Ĝ", "--.-."},
+			{"Ĵ", ".---."},
+			{"Ń", "--.--"},
+			{"Ñ", "--.--"},
+			{"Ó", "---."},
+			{"Ö", "---."},
+			{"Ø", "---."},
+			{"Ś", "...-..."},
+			{"Ŝ", "...-."},
+			{"Þ", ".--.."},
+			{"Ü", "..--"},
+			{"Ŭ", "..--"},
+			{"Ź", "--..-."},
+			{"Ż", "--..-"},
+			//PROSIGN
+			{"<HH>", "........"},
+			{"<VA>", "...-.-"},
+			{"<VE>", "...-."},
+			{"<AA>", ".-.-"},
+			{"<AR>", ".-.-."},
+			{"<AS>", ".-..."},
+			{"<BK>", "-...-.-"},
+			{"<BT>", "-...-"},
+			{"<CL>", "-.-..-.."},
+			{"<CT>", "-.-.-"},
+			{"<DO>", "-..---"},
+			{"<KA>", "-.-.-"},
+			{"<KN>", "-.--."},
+			{"<SK>", "...-.-"},
+			{"<SN>", "...-."},
+			{"<SOS>", "...---..."}
+	};
+	
+	public static final Map<String, String> MORSE_2_STRING_MAP = new TreeMap<>(); 
+	public static final Map<String, String> STRING_2_MORSE_MAP = new TreeMap<>();
+	static{
+		String  key;
+		for(String[] str : MORSE_2_STRING)
+			if((key = MORSE_2_STRING_MAP.put(str[0], str[1]))!=null)
+				System.out.println("Duplicate in morse code for: "+key+str[1]);
+		
+		for(String[] str : STRING_2_MORSE)
+			if((key = STRING_2_MORSE_MAP.put(str[0], str[1]))!=null)
+				System.out.println("Duplicate in morse string for: "+key);
+		
+	}
+}
 
 class RAFBuffer{
 	static int BUFFER_SIZE = 65_536;
