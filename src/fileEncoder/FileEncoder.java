@@ -34,7 +34,7 @@ import javax.imageio.ImageIO;
  * DONE				v buffry by citalo po pismene, nie po riadku (ak by bola neriadkovana, by padlo na pamat)
  * DONE				ak enter, tak zapis enter, 
  * DONE				ak nenajde, tak error a napisat co
- * DONE				oddelovac pismen / slov //
+ * DONE				oddelovac pismen ' ' slov '/'
  * source	https://morsecode.world/international/morse2.html
  * 
  * este by sa dalo zrychlit tak, zevypocita kolko bitov a maticou by preslo iba raz, teraz sa to toci po jednom bite cela matica,, cize ak napr. by vypocitalo 5bitov, tak by netocilo maticu 5 krat ale iba raz
@@ -863,18 +863,20 @@ public class FileEncoder {
 		BufferedWriter bw = new BufferedWriter(fw);
 		
 		int i;
-		String str = null, str2;
+		String str = null, str2;		
 		while((i=br.read())!=-1 && !cancel) {
+			//System.out.println((char)i);
 			if(i=='\n' || i=='\r')
 				bw.write(i);
 			else{
 				if(i==' '){
-					if(str==null || !str.equals(" "))//prevent more white spaces
-						bw.write(MORSE_CHAR_DELIMITER); //because one / is put by end char
-					else
+					if(str==null || !str.equals(" "))//prevent more white spaces						
 						bw.write(MORSE_WORD_DELIMITER);
 					str = (char)i+"";
 				}else{
+					if(str!=null && str.equals(" "))//to start with delimiter
+						bw.write(MORSE_CHAR_DELIMITER);//new char start with delimiter
+						
 					str = ((char)i+"").toUpperCase();
 					if((str2 = STRING_2_MORSE_MAP.get(str))!=null){
 						bw.write(str2+MORSE_CHAR_DELIMITER);
@@ -882,14 +884,14 @@ public class FileEncoder {
 						if(i=='<'){ //must begin and end with braces <>							
 							while((i=br.read())!=-1 && i!='>' && str.length()<100){ //<100 because can fail on memmory because if you get < and MBs of next characters
 								if(i==-1)
-									throw new IOException("Error, there is no MORSE code:'"+str+"''");
+									throw new IOException("Error, there is no MORSE code:'"+str+"'");
 								str += ((char)i+"").toUpperCase();
 							}
 							str += (char)i+"";
 							if((str2 = STRING_2_MORSE_MAP.get(str.toUpperCase()))!=null)
 								bw.write(str2+MORSE_CHAR_DELIMITER);
 							else
-								throw new IOException("Error, there is no MORSE code:'"+str+"''");
+								throw new IOException("Error, there is no MORSE code:'"+str+"'");
 						}else{
 							throw new IOException("Error, there is no MORSE code:'"+str+"'");
 						}
@@ -926,22 +928,25 @@ public class FileEncoder {
 		while((i=br.read())!=-1 && !cancel) {
 			if(i=='\n' || i=='\r')
 				bw.write(i);
-			else{
-				str = (char)i+"";
-				if(str.equals(MORSE_CHAR_DELIMITER))
+			else{				
+				if(i!=MORSE_CHAR_DELIMITER)
+					str = (char)i+"";
+				else
+					str = "";
+				if(i==MORSE_WORD_DELIMITER)
 					bw.write(" ");
 				else{
-					while((i=br.read())!=-1 && i!=MORSE_CHAR_DELIMITER.charAt(0) && str.length()<100){ //<100 because can fail on memmory because if you get < and MBs of next characters
+					while((i=br.read())!=-1 && i!=MORSE_CHAR_DELIMITER && str.length()<100){ //<100 because can fail on memmory because if you get < and MBs of next characters
 						if(i==-1)
-							throw new IOException("Error, there is no MORSE code:'"+str+"''");
-						if(i!=MORSE_CHAR_DELIMITER.charAt(0))
+							throw new IOException("Error, there is no MORSE code:'"+str+"'");
+						if(i!=MORSE_CHAR_DELIMITER)
 							str += ((char)i+"").toUpperCase();
 					}
 					str2 = MORSE_2_STRING_MAP.get(str);
 					if(str2!=null)
 						bw.write(str2);
 					else
-						throw new IOException("Error, there is no MORSE code:'"+str+"''");
+						throw new IOException("Error, there is no MORSE code:'"+str+"'");
 				}							
 			}
 			//
@@ -957,7 +962,17 @@ public class FileEncoder {
 	}
 	
 	public static void main(String[] args) throws Exception {	
-	
+		/*
+		String str = Normalizer
+				.normalize("ýťčŤŘ", Normalizer.Form.NFD)
+				.replaceAll("[^\\p{ASCII}]", "");
+		
+		System.out.println(str);
+		System.out.println((int)'ý');
+		asi urob mapu
+		if(1==1)
+			return;
+		*/
 		/*
 		long  size = 35000;
 		size *= 1/(MAX_DATA_IN_IMAGE_RATIO-RANDOM.nextDouble()*MIN_DATA_IN_IMAGE_RATIO);
@@ -1916,8 +1931,8 @@ public class FileEncoder {
 			"Fagnano"};
 	
 	
-	public static final String MORSE_CHAR_DELIMITER = "/";
-	public static final String MORSE_WORD_DELIMITER = "// ";
+	public static final char MORSE_CHAR_DELIMITER = ' ';
+	public static final char MORSE_WORD_DELIMITER = '/';
 	
 	public static final String[][] MORSE_2_STRING = {
 			//LETTER
@@ -2115,7 +2130,7 @@ public class FileEncoder {
 			{"Ü", "..--"},
 			{"Ŭ", "..--"},
 			{"Ź", "--..-."},
-			{"Ż", "--..-"},
+			{"Ż", "--..-"},			
 			//PROSIGN
 			{"<HH>", "........"},
 			{"<VA>", "...-.-"},
@@ -2132,11 +2147,35 @@ public class FileEncoder {
 			{"<KN>", "-.--."},
 			{"<SK>", "...-.-"},
 			{"<SN>", "...-."},
-			{"<SOS>", "...---..."}
+			{"<SOS>", "...---..."},
+			//My added to be converted as non diacritics
+			{"Á", ".-"},
+			//{"Ä", ".-"},
+			{"Č", "-.-."},
+			{"Ď", "-.."},
+			//{"É", "."},
+			{"Ě", "."},
+			{"Í", ".."},
+			{"Ĺ", ".-.."},
+			{"Ľ", ".-.."},
+			{"Ň", "-."},
+			//{"Ó", "---"},
+			{"Ô", "---"},
+			{"Ŕ", ".-."},
+			{"Ř", ".-."},
+			//{"Š", "..."},
+			{"Ť", "-"},
+			{"Ú", "..-"},
+			{"Ů", "..-"},
+			{"Ý", "-.--"},
+			{"Ž", "--.."}
+			//{"–", "-....-"},
+			//{"„", ".-..-."},
+			//{"“", ".-..-."}			
 	};
 	
 	public static final Map<String, String> MORSE_2_STRING_MAP = new TreeMap<>(); 
-	public static final Map<String, String> STRING_2_MORSE_MAP = new TreeMap<>();
+	public static final Map<String, String> STRING_2_MORSE_MAP = new TreeMap<>();	
 	static{
 		String  key;
 		for(String[] str : MORSE_2_STRING)
@@ -2146,7 +2185,6 @@ public class FileEncoder {
 		for(String[] str : STRING_2_MORSE)
 			if((key = STRING_2_MORSE_MAP.put(str[0], str[1]))!=null)
 				System.out.println("Duplicate in morse string for: "+key);
-		
 	}
 }
 
