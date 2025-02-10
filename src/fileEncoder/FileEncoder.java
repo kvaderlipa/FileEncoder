@@ -282,6 +282,9 @@ public class FileEncoder {
 		cancel = false;
 		progress = 0;
 				
+		
+        //long time = System.currentTimeMillis();
+        
 		byte[] buffer = new byte[BUFFER_SIZE];
 		byte[] xor = new byte[buffer.length];
 		
@@ -298,13 +301,15 @@ public class FileEncoder {
 			for (int j = 0; j < i; j++)
 				buffer[j] ^= xor[j]; 
 			racw.write(buffer, 0, i);
-			//progress = (int)((double)racr.getFilePointer()/racr.length()*100);
+			progress = (int)((double)racr.getFilePointer()/racr.length()*100); //tested, does not slow down really
 		}
 		racr.close();
 		racw.close();	
 		//		
 		inProgress = false;
 		//
+		
+		//System.out.println(System.currentTimeMillis()-time+" milis took to end file");
 	}
 	
 		public static BufferedImage CREATE_IMAGE(int width, int height, int red, int green, int blue, Random r){
