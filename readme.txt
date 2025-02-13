@@ -1,6 +1,8 @@
 # you can use in linux split and cat commands for splitting and merging files, eg. for steg merging files when needed
 # split --bytes=20M inputfile ouput.
 # cat ouput* > out
+# you can check if files differ using program diff, output if differs
+# diff data1 data2
 
 # use git clone to get
 git clone https://github.com/kvaderlipa/FileEncoder FileEncoder
