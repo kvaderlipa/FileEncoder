@@ -699,10 +699,16 @@ public class FileEncoder {
 				
 		while((i=bis.read())!=-1 && !cancel) {			
 			if(i=='\n')
-				i=bis.read();
+				while((i=bis.read())=='\n');
 			a = bis.read();
 			if(a=='\n')
-				a = bis.read();
+				while((a=bis.read())=='\n');
+			//convert to upper case
+			if(i >= 'a' && i <='f')
+				i -= 'a' - 'A';				
+			if(a >= 'a' && a <='f')
+				a -= 'a' - 'A';
+			//
             if (i >= '0' && i <= '9')
                 i -= '0';
             else 
