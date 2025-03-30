@@ -15,7 +15,7 @@ alias updateFileEncoder='wget -O /home/kvaderlipa/FileEncoder/dist/FileEncoder.j
 # then add alias at the end of /home/kvaderlipa/.bashrc file
 cp /home/kvaderlipa/.bashrc /home/kvaderlipa/.bashrc.bak
 echo "alias FileEncoder='java -cp /home/kvaderlipa/FileEncoder/dist/FileEncoder.jar fileEncoder.FileEncoder'" >> /home/kvaderlipa/.bashrc
-echo "alias updateFileEncoder='wget -O /home/kvaderlipa/FileEncoder/dist/FileEncoder.jar https://github.com/kvaderlipa/FileEncoder/raw/refs/heads/master/dist/FileEncoder.jar'"
+echo "alias updateFileEncoder='wget -O /home/kvaderlipa/FileEncoder/dist/FileEncoder.jar https://github.com/kvaderlipa/FileEncoder/raw/refs/heads/master/dist/FileEncoder.jar'" >> /home/kvaderlipa/.bashrc
 
 # to only refresh jar file
 wget -O /home/kvaderlipa/FileEncoder/dist/FileEncoder.jar https://github.com/kvaderlipa/FileEncoder/raw/refs/heads/master/dist/FileEncoder.jar
