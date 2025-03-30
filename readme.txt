@@ -19,6 +19,3 @@ echo "alias updateFileEncoder='wget -O /home/kvaderlipa/FileEncoder/dist/FileEnc
 
 # to only refresh jar file
 wget -O /home/kvaderlipa/FileEncoder/dist/FileEncoder.jar https://github.com/kvaderlipa/FileEncoder/raw/refs/heads/master/dist/FileEncoder.jar
-
-# if you dont have JRE installed
-sudo apt install default-jre
