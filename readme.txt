@@ -3,6 +3,8 @@
 # cat ouput* > out
 # you can check if files differ using program diff, output if differs
 # diff data1 data2
+# for win CMD use copy /b part.1 + part.2 part
+# or copy /b part.* part
 
 # use git clone to get
 git clone https://github.com/kvaderlipa/FileEncoder FileEncoder
